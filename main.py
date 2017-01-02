@@ -2,6 +2,8 @@ import os
 import pickle
 from utils import *
 import h5py
+import model
+import tensorflow as tf
 
 with open("list_files.pkl", "rb") as output:
     list_path,list_label = pickle.load(output)
@@ -35,13 +37,10 @@ def transform_img(path):
     return img
 
 img1 = transform_img(path)
-import model
-import tensorflow as tf
 
 
 myModel = model.tf_cam(3)
 x,y,var_dict = myModel.get_training_model()
-# x,y,params = model.get_training_model()
 
 y_  = tf.placeholder(tf.float32, [None, N_classes])
 
@@ -49,9 +48,6 @@ loss = myModel.get_loss(y,y_)
 train_op = tf.train.AdamOptimizer(0.01).minimize(loss)
 
 
-for name in var_dict.keys():
-    print(name,var_dict[name].get_shape())
-exit()
 sess = tf.Session(
         config=tf.ConfigProto(
                 log_device_placement=False,
@@ -80,24 +76,6 @@ print(A.shape)
 
 
 
-
-#     A = A+0.1
-#     sess.run(idx.assign(A))
-#     # sess.run(tf.initialize_all_variables())
-# # for idx in params:
-#     A=sess.run(idx)
-#     print(A.mean(),A[0])
-#     print('===============')
-
-# print('==')
-# for idx in tf.all_variables():
-#     A=sess.run(idx)
-#     print(idx.name,A.shape,A.mean())
-
-
-# exit(0)
-# print([sess.run(p) for p in layers])
-# exit()
 
 for v in tf.trainable_variables():
     print(v.name)
@@ -132,9 +110,6 @@ for epoch in range(N_epoch):
         A=sess.run(var_dict[name])
         print(name,A.mean())
     print('=============')
-    # print(A)
-    print(be)
-    print(co)
 
 
 
@@ -145,11 +120,5 @@ for key in var_dict.keys():
 
 f.close()
 
-# for layer in layers:
-#     res = sess.run(layer,feed_dict={x:X_batch})
-#     print(res)
-
-
-# print(A)
 sess.close()
 
