@@ -33,7 +33,8 @@ class tf_model(object):
 
         initial = tf.constant(value=weights,dtype=tf.float32)
         return tf.Variable(initial,name=name,trainable=trainable)
-
+        # return tf.get_variable(name="up_filter", initializer=init,
+        #                        shape=weights.shape)
 
 
 
