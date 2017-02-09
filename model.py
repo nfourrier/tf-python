@@ -1,6 +1,65 @@
 import tensorflow as tf
 
 
+import dasakl.nn.layer as lay
+class mmodel(object):
+    def __init__(self,):
+        self.name = 'yolo'
+
+
+    def parse(self,cfg_file):
+        from dasakl.nn.parser import get_layers
+        layers = get_layers(cfg_file)
+        return layers
+
+    def get_input(self,dim0,dim1,dim2):
+
+        self.inp = tf.placeholder(tf.float32,[None, dim0, dim1, dim2])
+        return self.inp
+
+
+    def set_input(self,dim):
+        self.inp = tf.placeholder(tf.float32,[None]+dim)
+        return self.inp
+
+
+    def get_model(self,layers):
+        inp = [self.inp]
+
+        self._layers = {}
+        self._variables = {}
+
+        N_layer = 0
+        for layer in layers:
+            param = layer
+
+            if(N_layer==0):
+                param[-1] = [self.inp]
+            else:
+                param[-1] = [self.layers['{}_{}'.format(param[-1][idx][0],param[-1][idx][1])] for idx in range(len(param[-1]))]
+            
+            tf_layer = lay.create_layer(*param)
+            self._layers['{}_{}'.format(param[0],param[1])] = tf_layer.out
+            N_layer += 1
+            print(param)
+            if(param[0]=='fullyconnected'):
+                self._layers['flatten_input'] = tf_layer.flatten[0]
+                self._layers['flatten_output'] = tf_layer.flatten[1]
+                # self._layers['flatten_output_transpose'] = tf_layer.flatten[1]
+        
+        # import pprint
+        # pprint.pprint(self.layers)
+
+        # for var in tf.global_variables(): 
+        #     print(var.name,type(var))
+
+        
+        for var in tf.global_variables(): ### old version was tf.all_variables()
+            # print(var.name)
+            self._variables[var.name] = var
+
+        return self.inp,self._layers['{}_{}'.format(param[0],param[1])],self._variables
+
 class bl_layer(object):
     def __init__(self,name,type,params):
         self.name = name
