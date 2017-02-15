@@ -67,7 +67,7 @@ class fullyconnected_layer(Layer):
 
 
 class convolutional_layer(Layer):
-    def setup(self,size,channels,filters,stride,padding,batch_norm,activation,inp):
+    def setup(self,size,channels,filters,channels,stride,padding,batch_norm,activation,inp):
         self.inp = inp[0]
         self.trainable = False
         channels = self.inp.get_shape()[3]
@@ -160,6 +160,7 @@ layers = {
     'maxpool': maxpool_layer,
     'fullyconnected': fullyconnected_layer,
     'convolutional': convolutional_layer,
+    'deconvolutional': deconvolutional_layer,
     'leaky': leaky_layer,
     'relu': relu_layer,
     'route': route_layer,
