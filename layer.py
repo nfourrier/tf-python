@@ -67,31 +67,6 @@ class fullyconnected_layer(Layer):
 
 class deconvolutional_layer(Layer):
     def setup(self, size, stride, padding, output_shape,activation,trainable,inp):
-        '''
-        Args:
-            inp: list of tf layers
-                the second element of inp is the target layer used to determine the shape of the deconv output
-        input_shape: `(samples, rows, cols, channels)`
-        output_shape: Output shape of the transposed convolution operation.
-        tuple of integers (nb_samples, nb_output_rows, nb_output_cols, nb_filter)
-        
-        Formula for calculation of the output shape [1], [2]:
-        o = s (i - 1) + a + k - 2p, \quad a \in \{0, \ldots, s - 1\}
-        where:
-            - i - input size (rows or cols),
-            - k - kernel size (nb_filter),
-            - s - stride (subsample for rows or cols respectively),
-            - p - padding size,
-            - a - user-specified quantity used to distinguish between
-            -     the s different possible output sizes.
-        Because a is not specified explicitly and Theano and Tensorflow
-        use different values, it is better to use a dummy input and observe
-        the actual output shape of a layer as specified in the examples.
-        # References
-        [1] [A guide to convolution arithmetic for deep learning](https://arxiv.org/abs/1603.07285 "arXiv:1603.07285v1 [stat.ML]")
-        [2] [Transposed convolution arithmetic](http://deeplearning.net/software/theano_versions/dev/tutorial/conv_arithmetic.html#transposed-convolution-arithmetic)
-        [3] [Deconvolutional Networks](http://www.matthewzeiler.com/pubs/cvpr2010/cvpr2010.pdf)
-        '''
         self.inp = inp[0]
         
         add_layers = False
