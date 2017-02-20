@@ -41,7 +41,7 @@ class mmodel(object):
             tf_layer = lay.create_layer(*param)
             self._layers['{}_{}'.format(param[0],param[1])] = tf_layer.out
             N_layer += 1
-            print(param)
+
             if(param[0]=='fullyconnected'):
                 self._layers['flatten_input'] = tf_layer.flatten[0]
                 self._layers['flatten_output'] = tf_layer.flatten[1]
@@ -60,6 +60,21 @@ class mmodel(object):
 
         return self.inp,self._layers['{}_{}'.format(param[0],param[1])],self._variables
 
+
+    def load_weights(self,session,filename,layers=None):
+        import h5py
+        f = h5py.File(filename,'r')
+        print('Load weights from {} \n \t last modified: {} \n \t ...'.format(filename,time.ctime(os.path.getmtime(filename))))
+        if(isinstance(layers,type(None))):
+            layers = self._variables.keys() 
+        for name in layers:
+            gp,dat = name.split("/")
+            print(name,np.prod(f[gp][dat].value.shape),self._variables[name].get_shape())
+            session.run(self._variables[name].assign(f[gp][dat].value))
+
+        f.close()
+        print('\t ... weights loaded')
+        
 class tf_model(object):
     def weight_variable(self,shape,name,trainable):
         initial = tf.truncated_normal(shape, stddev=0.1)
