@@ -208,3 +208,12 @@ layers = {
 def create_layer(ltype, num, *args):
     op_class = layers.get(ltype, Layer)
     return op_class(ltype, num, *args)
+
+
+    
+
+def main():
+    print('Not implemented')
+
+if __name__ == '__main__':
+    main()
