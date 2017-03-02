@@ -40,13 +40,7 @@ class Detector(object):
 
         self.sess = tf.Session(config=tf_config)
         self.sess.run(tf.global_variables_initializer())
-        # file_save = os.path.join(dasakl.DATA_FOLDER,'weights','segnet_init.hdf5')
-        # f = h5py.File(file_save,'w')
-        # for key in self.var_dict.keys():
-        #     A = self.sess.run(self.var_dict[key])
-        #     f.create_dataset(key,data=A)
-        # f.close()
-        # exit()
+        
         
         if(not isinstance(weights,type(None))):
             self.model.load_weights(self.sess,weights)
@@ -56,8 +50,7 @@ class Detector(object):
 
     def save_graph(self,filename):
         tf.train.write_graph(self.sess.graph_def, '/home/gpu/data', 'graph_segface.pb', as_text=False)
-        print('GRAPH SAVED')
-
+        
     def load_framework(self,framework_dico):
         self.set_preprocess(framework_dico['preprocess'])
         self.set_postprocess(framework_dico['postprocess'])
@@ -104,9 +97,6 @@ class Detector(object):
         self.global_step = tf.get_variable('global_step', [],
             initializer=tf.constant_initializer(0), trainable=False)
 
-        # self.learning_rate = tf.train.exponential_decay(
-        # self.initial_learning_rate, self.global_step, self.decay_steps,
-        # self.decay_rate, self.staircase, name='learning_rate')
         self.learning_rate =params['learning_rate']
         self.loss = self.get_loss(self.y,self.y_true)
         self.accuracy = self.get_accuracy(self.y,self.y_true)
@@ -145,27 +135,13 @@ class Detector(object):
         return self.sess.run(layer_input,feed_dict={self.x: preprocessed})
 
     def image_detector(self, image,meta=None):
-        # image = cv2.imread(image)
-        
         preprocessed = self.preprocess(image,self.meta)
         net_out = self.detect(preprocessed)
         processed = self.postprocess(net_out,self.meta)
 
         return processed
-        # for name in list(self.var_dict.keys()):
-        #     print(name)
-        #     print(self.var_dict[name].eval(self.sess).mean())
-        # for name in list(self.model.layers):
-        #     print(name)
-        # print(self.model.layers['convolutional_0'])
-        # processed = self.draw_result(image,processed)
-        # print(processed.shape)
-        # img_name = '/home/gpu/data/test_MYdarkflow.jpg'
-        # cv2.imwrite(img_name, processed)
-
 
     def camera_detector(self, camera, wait=10):
-        # detect_timer = Timer()
         preprocess_timer = Timer()
         network_timer = Timer()
         postprocess_timer = Timer()
@@ -174,8 +150,6 @@ class Detector(object):
         print('preprocess \t network \t postprocess \t draw \t total')
         count = 0
         while camera.isOpened():
-        # while True:
-            # print(count)
             count += 1
             _, frame = camera.read()
             frame_timer.tic()
@@ -187,16 +161,11 @@ class Detector(object):
             network_timer.tic()            
             net_out = self.detect(preprocessed)
             network_timer.toc()
-            # detect_timer.toc()
-            # print('Average detecting time: {:.3f}s'.format(detect_timer.average_time))
 
-            # self.draw_result(frame, result)
-            # if(count == 100):
-            #     np.save('/home/gpu/data/testPostprocess.npy',net_out)            
-            #     print('network out saved')
             postprocess_timer.tic()
             processed = self.postprocess(net_out,self.meta)
             postprocess_timer.toc()
+
             draw_timer.tic()
             # processed = self.draw_result(frame,processed)
             draw_timer.toc()
@@ -224,63 +193,13 @@ class Detector(object):
         camera.release()
         cv2.destroyAllWindows()
 
-    def draw_result(self,image,boxes):
-        df = pd.read_csv('/home/gpu/data/MODEL_PARAMETERS/yolo80_class_descriptor.csv')
-        labels = df.set_index('class')['label'].to_dict()
-        colors = df.set_index('class')['rgb'].to_dict()
-        for key in list(colors.keys()):
-            colors[key] = tuple([int(x) for x in colors[key].split('(')[1].split(')')[0].split(',')])
-
-        # print(colors)
-
-        threshold = 0.3
-        C = 80
-
-        if type(image) is not np.ndarray:
-            imgcv = cv2.imread(image)
-        elif(len(image.shape)>3):
-            imgcv = image[0,:,:,:]
-        else:
-            imgcv = image
-        h, w, _ = imgcv.shape
-        
-        for b in boxes:
-            max_indx = np.argmax(b['probs'])
-            max_prob = b['probs'][max_indx]
-            label = 'object' * int(C < 2)
-            label += labels[max_indx+1] * int(C>1)
-            if max_prob > threshold:
-                left  = int ((b['x'] - b['w']/2.) * w)
-                right = int ((b['x'] + b['w']/2.) * w)
-                top   = int ((b['y'] - b['h']/2.) * h)
-                bot   = int ((b['y'] + b['h']/2.) * h)
-                if left  < 0    :  left = 0
-                if right > w - 1: right = w - 1
-                if top   < 0    :   top = 0
-                if bot   > h - 1:   bot = h - 1
-                thick = int((h+w)/300)
-                # print(colors[max_indx+1])
-                cv2.rectangle(imgcv, 
-                    (left, top), (right, bot), 
-                    colors[max_indx+1], thick)
-                mess = '{}'.format(label)
-                cv2.putText(imgcv, mess, (left, top - 12), 
-                    0, 1e-3 * h, colors[max_indx+1],thick//3)
-
-        return imgcv
-
-
-
+    
     def train(self):
         train_timer = Timer()
         load_timer = Timer()
         epoch_timer = Timer()
         batch_timer = Timer()
-        print("trainable variables")
-        print([var.name for var in tf.trainable_variables()])
-        # params['batch_size'] = 64
-        # params['N_epoch'] = 1000
-
+    
         N_samples = self.data.N_samples
         N_batch = int(N_samples/self.batch_size)
 
@@ -318,16 +237,10 @@ class Detector(object):
                 feed_dict = {self.x: X_batch, self.y_true: Y_batch}
                 
                 tmp,acc,loss,_ = self.sess.run([labels,self.accuracy,self.loss, self.train_op],feed_dict=feed_dict)
-                # print(tmp.shape,tmp.dtype)
-                # print(np.unique(tmp[:,0]),tmp[:,0].mean())
-                # print(np.unique(tmp[:,1]),tmp[:,1].mean())
-                # print(np.unique(tmp[:,2]),tmp[:,2].mean())
 
                 epoch_loss += loss
                 epoch_acc += acc
                 train_timer.toc()
-                # print(acc)
-                # print(y[12,:])
                 if(step%100==0):
                     print('\t Epoch {0}: {1}/{2} --acc = {3:09.1f} --loss = {4:09.4f} --train_time = {5:06.2f} --load_time = {6:06.2f}'.format(
                         epoch,batch+1,N_batch,epoch_acc/batch+1,loss,train_timer.diff,load_timer.diff))
