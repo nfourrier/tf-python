@@ -18,7 +18,7 @@ import h5py
 
 class Detector(object):
     def __init__(self, cfg, weights=None, GPU=True):
-        self.name = os.path.split(cfg)[1].split('.')[0]
+        self.name = os.path.basename(cfg).split('.')[0]
         tf.reset_default_graph()
         self.model = mmodel()
         self.meta,self.layers = self.model.parse(cfg)
@@ -27,9 +27,6 @@ class Detector(object):
 
         self.x,self.y,self.var_dict = self.model.get_model(self.layers)
 
-        for lay in list(self.model.layers.keys()):
-            print(lay,self.model.layers[lay].shape)
-        # exit()
         if(GPU):
             tf_config = tf.ConfigProto(
                 log_device_placement=False,gpu_options=(tf.GPUOptions(per_process_gpu_memory_fraction=0.80))
@@ -48,9 +45,72 @@ class Detector(object):
     def load_weights(self,filename,layers=None):
         self.model.load_weights(self.sess,filename,layers)
 
-    def save_graph(self,filename):
-        tf.train.write_graph(self.sess.graph_def, '/home/gpu/data', 'graph_segface.pb', as_text=False)
+    def save_graph(self,filename,freeze=True,output_nodes=None):
+        def _freeze_graph(model_folder,model_name,output_nodes):
+            # We retrieve our checkpoint fullpath
+            checkpoint = tf.train.get_checkpoint_state(model_folder,latest_filename='checkpoint')
+            input_checkpoint = checkpoint.model_checkpoint_path
+            
+            # We precise the file fullname of our freezed graph
+            # absolute_model_folder = "/".join(input_checkpoint.split('/')[:-1])
+            # output_graph = os.path.join(absolute_model_folder,model_name)
+
+            # Before exporting our graph, we need to precise what is our output node
+            # This is how TF decides what part of the Graph he has to keep and what part it can dump
+            # NOTE: this variable is plural, because you can have multiple output nodes
+            # output_node_names = "BiasAdd_18" 
+
+            # We clear devices to allow TensorFlow to control on which device it will load operations
+            clear_devices = True
+            
+            # We import the meta graph and retrieve a Saver
+            saver = tf.train.import_meta_graph(input_checkpoint + '.meta', clear_devices=clear_devices)
+
+            # We retrieve the protobuf graph definition
+            graph = tf.get_default_graph()
+            input_graph_def = graph.as_graph_def()
+
+            # We start a session and restore the graph weights
+            with tf.Session() as sess:
+                saver.restore(sess, input_checkpoint)
+
+                # We use a built-in TF helper to export variables to constants
+                output_graph_def = graph_util.convert_variables_to_constants(
+                    sess, # The session is used to retrieve the weights
+                    input_graph_def, # The graph_def is used to retrieve the nodes 
+                    output_nodes.split(",") # The output node names are used to select the usefull nodes
+                ) 
+
+                # Finally we serialize and dump the output graph to the filesystem
+                with tf.gfile.GFile(os.path.join(model_folder,model_name+'.pb'), "wb") as f:
+                    f.write(output_graph_def.SerializeToString())
+                print("%d ops in the final graph." % len(output_graph_def.node))
+
+        path = os.path.abspath(filename)
+        dirname = os.path.dirname(path)
+        filename = os.path.basename(path)
+
+        # if(freeze):
+        #     filename_tmp = 'tmp_'+filename
+        # else:
+        #     filename_tmp = filename
+        basename = filename.split('.')[0]
+
+        saver = tf.train.Saver()
+        # self.sess.run(tf.global_variables_initializer())
         
+        saver.save(sess=self.sess,save_path=os.path.join(dirname,basename),global_step=0,latest_filename='checkpoint')
+        # tf.train.write_graph(self.sess.graph_def, dirname, filename_tmp)
+
+        if(freeze):
+            rmFiles = [basename+'-0'+x for x in ['.data-00000-of-00001','.meta','.index']]
+            rmFiles.append('checkpoint')
+            rmFiles = [os.path.join(dirname,x) for x in rmFiles]
+            _freeze_graph(dirname,basename,output_nodes)
+            [os.remove(x) for x in rmFiles]
+        else:
+            tf.train.write_graph(self.sess.graph_def, dirname, filename)
+        print('GRAPH SAVED')
     def load_framework(self,framework_dico):
         self.set_preprocess(framework_dico['preprocess'])
         self.set_postprocess(framework_dico['postprocess'])
@@ -186,10 +246,6 @@ class Detector(object):
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 camera.release()
                 break
-            # choice = cv2.waitKey(1)
-            # if choice == 27: 
-            #     camera.release()
-            #     break
         camera.release()
         cv2.destroyAllWindows()
 
