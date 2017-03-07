@@ -65,6 +65,53 @@ class fullyconnected_layer(Layer):
             temp = tf.nn.bias_add(tf.matmul(x, self.weights), self.biases,name= self.scope+'-out')
         return self.out
 
+class deconvolutional_layer_same(Layer):
+    def setup(self, size, stride, padding, output_shape,activation,trainable,inp):
+        self.inp = inp[0]
+        
+        add_layers = False
+        if(output_shape[0]<0):
+            target_layer = inp[1]
+            out_features = target_layer.get_shape()[3].value 
+            output_shape = tf.shape(target_layer)
+            add_layers = True
+        else:
+            out_features = output_shape[2]
+            input_shape = tf.shape(self.inp)
+            output_shape = tf.stack([input_shape[0]]+output_shape)
+
+
+        in_features = self.inp.get_shape()[3].value
+        
+        
+        self.weights = tf.Variable(
+                         tf.truncated_normal([size, size, out_features, in_features],stddev=0.1),
+                         trainable=trainable,
+                         name=self.scope+'/kernel')
+        self.biases = tf.Variable(
+                         tf.constant(0.1, shape=[out_features]),
+                         trainable=trainable,
+                         name=self.scope+'/biases')
+        padder = [[padding, padding]] * 2
+        temp = tf.pad(self.inp, [[0, 0]] + padder + [[0, 0]])
+        print(temp.get_shape(),self.weights.get_shape(),stride,size)
+        deconv = tf.nn.conv2d_transpose(temp, self.weights, output_shape,
+                                        strides=[1] + [stride] * 2 + [1], 
+                                        padding='SAME') ## SAME
+        print(temp.get_shape(),deconv.get_shape())
+        out = tf.nn.bias_add(deconv, self.biases)
+        # print(self.out)
+
+        if(add_layers):
+            out = tf.add(out,target_layer)
+        if(activation=='softmax'):
+            # self.out = tf.nn.softmax(self.out+tf.constant(value=1e-10))
+            print('la2')
+            out = tf.nn.softmax(out,name=self.scope+'/softmax')
+            # print(self.out)
+        self.out = tf.identity(out,name=self.scope+'/deconv')
+        return self.out
+
 class deconvolutional_layer(Layer):
     def setup(self, size, stride, padding, output_shape,activation,trainable,inp):
         self.inp = inp[0]
@@ -86,21 +133,25 @@ class deconvolutional_layer(Layer):
         
         self.weights = tf.Variable(
                          tf.truncated_normal([size, size, out_features, in_features],stddev=0.1),
-                         trainable=0,
+                         trainable=trainable,
                          name=self.scope+'/kernel')
         self.biases = tf.Variable(
                          tf.constant(0.1, shape=[out_features]),
-                         trainable=0,
+                         trainable=trainable,
                          name=self.scope+'/biases')
         padder = [[padding, padding]] * 2
         temp = tf.pad(self.inp, [[0, 0]] + padder + [[0, 0]])
+        pd2 = int((inp_shp[1]-1)*stride+size-out_shp[1])
         deconv = tf.nn.conv2d_transpose(temp, self.weights, output_shape,
                                         strides=[1] + [stride] * 2 + [1], 
-                                        padding='SAME') ## SAME
+                                        padding='VALID') ## SAME
         self.out = tf.nn.bias_add(deconv, self.biases)
 
         if(add_layers):
             self.out = tf.add(self.out,target_layer)
+        if(activation=='softmax'):
+            self.out = tf.nn.softmax(self.out)
+
         return self.out
 
 class convolutional_layer(Layer):
