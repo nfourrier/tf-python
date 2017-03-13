@@ -9,7 +9,7 @@ import pandas as pd
 import dasakl
 import dasakl.nn.layer as lay
 from dasakl.nn.model import mmodel,generic_model,optimizer
-from dasakl.nn.parser import get_layers,blm
+from dasakl.nn.parser import get_layers
 from dasakl.utils import Timer, DataSet, Log
 import os
 import h5py
@@ -51,10 +51,6 @@ class Detector(object):
             checkpoint = tf.train.get_checkpoint_state(model_folder,latest_filename='checkpoint')
             input_checkpoint = checkpoint.model_checkpoint_path
             
-            # We precise the file fullname of our freezed graph
-            # absolute_model_folder = "/".join(input_checkpoint.split('/')[:-1])
-            # output_graph = os.path.join(absolute_model_folder,model_name)
-
             # Before exporting our graph, we need to precise what is our output node
             # This is how TF decides what part of the Graph he has to keep and what part it can dump
             # NOTE: this variable is plural, because you can have multiple output nodes
@@ -111,6 +107,7 @@ class Detector(object):
         else:
             tf.train.write_graph(self.sess.graph_def, dirname, filename)
         print('GRAPH SAVED')
+
     def load_framework(self,framework_dico):
         self.set_preprocess(framework_dico['preprocess'])
         self.set_postprocess(framework_dico['postprocess'])
@@ -282,30 +279,32 @@ class Detector(object):
                 ### Convert the path into the appropriate format for the neural net
                 X_batch = np.concatenate([self.preprocess(x,self.meta) for x in inputs_path], axis=0)
                 Y_batch = np.concatenate([self.read_output(y,self.meta) for y in outputs_path], axis=0)
-                # print(Y_batch[12,:])
-
-                label_flat = tf.reshape(self.y_true, (-1, 1))
-                labels = tf.reshape(tf.one_hot(label_flat, depth=3), (-1, 3))
 
                 load_timer.toc()
 
                 train_timer.tic()
-                feed_dict = {self.x: X_batch, self.y_true: Y_batch}
-                
-                tmp,acc,loss,_ = self.sess.run([labels,self.accuracy,self.loss, self.train_op],feed_dict=feed_dict)
+                feed_dict = {self.x: X_batch, self.y_true: Y_batch}                
+                acc,loss,_ = self.sess.run([self.accuracy,self.loss, self.train_op],feed_dict=feed_dict)
 
                 epoch_loss += loss
                 epoch_acc += acc
                 train_timer.toc()
+                
+                ### Print batch stat every 100 batches (independant from epochs)
                 if(step%100==0):
                     print('\t Epoch {0}: {1}/{2} --acc = {3:09.1f} --loss = {4:09.4f} --train_time = {5:06.2f} --load_time = {6:06.2f}'.format(
                         epoch,batch+1,N_batch,epoch_acc/batch+1,loss,train_timer.diff,load_timer.diff))
 
             epoch_timer.toc()
+
+            ### Print epoch stat
             print('Epoch {0}: --acc = {1:09.4f} --loss = {2:09.4f} --time = {3:06.2f}'.format(
                         epoch,epoch_acc,epoch_loss,epoch_timer.diff))
+            ### Write epoch stats to file
             self.logger.add(epoch,epoch_loss,epoch_acc,epoch_timer.diff)
 
+
+            ### Save weights every save_epoch (every 10 epochs for instances)
             if(epoch%self.save_epoch==0):
                 N_back_up = np.mod(N_back_up+1,2)
                 file_save = self.weight_save_file.format(self.name,str(N_back_up))
