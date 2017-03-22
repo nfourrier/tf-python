@@ -2,11 +2,22 @@ import cv2
 import numpy as np
 
 
+def merge_frame(mat_list,txt_list=None,option=None,window_size=[1000,1000],border_size=[10,10]):
+    '''
+    this function is designed to show result of various filters from differnt convolutional layers
+    '''
+
+
+    if(not isinstance(mat_list,type(['list']))):
+        mat_list = [mat_list]
+    N_mat = len(mat_list)
+    N_mat_per_row = 6
+    N_row = np.floor(np.sqrt(N_mat))
+    
+    if(isinstance(txt_list,type(None))):
+        txt_list = [' '] * N_mat
 
 def convolution(mat,window_size=[1000,1000],border_size=[10,10],frame_index=0):
-    # window_size = [1000,1000]
-    # border_size = [10,10]
-    
     shp = mat.shape
 
     B = np.zeros((window_size[0],window_size[1],1))
@@ -28,7 +39,6 @@ def convolution(mat,window_size=[1000,1000],border_size=[10,10],frame_index=0):
             
             if(N_image < shp[2]):
                 filter_ij = cv2.resize(mat[:,:,N_image],tuple(resize_size))
-                # print(start_idx,start_idx + resize_size[0],start_jdx,start_jdx + resize_size[1])
                 B[start_idx:start_idx + resize_size[0],start_jdx:start_jdx + resize_size[1],0] = filter_ij
             N_image += 1
             start_jdx += size[1]
