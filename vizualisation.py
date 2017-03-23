@@ -1,10 +1,9 @@
 import cv2
 import numpy as np
 
-
 def merge_frame(mat_list,txt_list=None,option=None,window_size=[1000,1000],border_size=[10,10]):
     '''
-    this function is designed to show result of various filters from differnt convolutional layers
+    each subpicture will be displayed as square
     '''
 
 
@@ -47,10 +46,11 @@ def merge_frame(mat_list,txt_list=None,option=None,window_size=[1000,1000],borde
             tmp = shp[idx][3]
             if(t_N_square_max<tmp):
                 t_N_square_max = tmp
+                t_N_square_per_column[idx_row] = t_N_square_max
             t_square_per_row[idx_row] += tmp
 
             if(N_square_cum[idx+1] >= (idx_row+1) * t_N_square_per_row):
-                t_N_square_per_column[idx_row] += t_N_square_max
+                
                 t_N_square_max = 0
                 idx_row += 1
                 
@@ -63,6 +63,24 @@ def merge_frame(mat_list,txt_list=None,option=None,window_size=[1000,1000],borde
             row = t_row
         else:
             break
+        # for idx in range(N_mat):
+    # # exit()
+    # print(shp)
+    # print(row)
+
+    # print(N_square_per_column)
+    # print(square_size)
+
+    small_border = [1,1]
+    big_border = [25,25]
+
+    real_square_size = [square_size - small_border[0]] * 2
+
+    pixel_x = [big_border[0]] * N_mat
+    pixel_y = [big_border[1]] * N_mat
+    idx_col = big_border[1]
+
+    
 
 def convolution(mat,window_size=[1000,1000],border_size=[10,10],frame_index=0):
     shp = mat.shape
