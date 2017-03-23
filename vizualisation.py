@@ -79,8 +79,56 @@ def merge_frame(mat_list,txt_list=None,option=None,window_size=[1000,1000],borde
     pixel_x = [big_border[0]] * N_mat
     pixel_y = [big_border[1]] * N_mat
     idx_col = big_border[1]
+    for idx in range(1,N_mat):
+        
+        if(row[idx]==row[idx-1]):
+            pixel_x[idx] = pixel_x[idx-1] + shp[idx-1][3] * square_size + big_border[0]
+        else:
+            idx_col += N_square_per_column[row[idx-1]] * square_size + big_border[1]
+        pixel_y[idx] = int(idx_col) 
 
+    B = np.zeros((window_size[0],window_size[1],1))-1
+    for idx in range(N_mat):
+        mat = mat_list[idx]
+        filter_N = 0
+        N_square_x = shp[idx][3]
+        N_square_total = shp[idx][2]
+        start_idx = pixel_x[idx] 
+        start_jdx = pixel_y[idx] 
+        for square_idx in range(N_square_x):
+            for square_jdx in range(N_square_x):
+                if(filter_N<N_square_total):
+                    filter_ij = cv2.resize(mat[0,:,:,filter_N],tuple(real_square_size))
+                    B[start_jdx:start_jdx + real_square_size[1],start_idx:start_idx + real_square_size[0],0] = filter_ij
+                    filter_N += 1
+                start_jdx = start_jdx + square_size
+            start_idx = start_idx + square_size
+            start_jdx = pixel_y[idx] 
+
+    mask = np.copy(B)
+    mask[mask>-1] = 0
+    mask[mask==-1] = 255
+    mask = mask.astype(np.uint8)
+    C = (B*255).astype(np.uint8)
     
+    C = cv2.applyColorMap(C, cv2.COLORMAP_JET)
+    D = cv2.bitwise_and(C,C,mask=mask)
+
+    for idx in range(N_mat): 
+        cv2.putText
+        C = cv2.subtract(C,D)
+        D[:,:] = [150,160,150]
+        D = cv2.bitwise_and(D,D,mask=mask)
+        C = cv2.add(C,D)
+
+
+    for idx in range(N_mat):
+        cv2.putText(C, txt_list[idx], (pixel_x[idx],pixel_y[idx]-int(big_border[1]*0.2)), 
+                0,  big_border[0]/50, [50,50,50],1)
+
+
+    return C
+
 
 def convolution(mat,window_size=[1000,1000],border_size=[10,10],frame_index=0):
     shp = mat.shape
