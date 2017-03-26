@@ -1,6 +1,36 @@
 import cv2
 import numpy as np
 
+background_rgb = [150,160,150]
+def append_frame(mat_list):
+    if(not isinstance(mat_list,type(['list']))):
+        mat_list = [mat_list]
+    N_mat = len(mat_list)
+    size_x = 0
+    size_y = 0
+    border_size = [10,10]
+    for idx in range(N_mat):
+        shp = mat_list[idx].shape
+        print(mat_list[idx].dtype)
+        if(shp[0] > size_y):
+            size_y = shp[0]
+        size_x = size_x + shp[1]
+
+    size_x = size_x + (N_mat+1) * border_size[0]
+    size_y = size_y + 2 * border_size[1]
+    full_frame = np.zeros((size_y,size_x,3),dtype=np.uint8)
+    full_frame[:,:] = background_rgb
+
+    idx_start = border_size[1]
+    jdx_start = border_size[0]
+    for idx in range(N_mat):
+        mat = mat_list[idx]
+        shp = mat.shape
+        full_frame[jdx_start:jdx_start+shp[0],idx_start:idx_start+shp[1],:] = mat
+        idx_start += border_size[1] + shp[1]
+        
+    return full_frame
+
 def merge_frame(mat_list,txt_list=None,option=None,window_size=[1000,1000],border_size=[10,10]):
     '''
     each subpicture will be displayed as square
