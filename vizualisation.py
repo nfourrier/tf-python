@@ -36,26 +36,23 @@ def merge_frame(mat_list,txt_list=None,option=None,window_size=[1000,1000],borde
     each subpicture will be displayed as square
     '''
 
+    ### check that the input is a list of matrices
 
     if(not isinstance(mat_list,type(['list']))):
         mat_list = [mat_list]
     N_mat = len(mat_list)
-    N_mat_per_row = 6
     N_row = np.floor(np.sqrt(N_mat))
     
     if(isinstance(txt_list,type(None))):
         txt_list = [' '] * N_mat
 
-    big_border = [20,20]
-    small_border = [5,5]
-    
     shp = [] # [width,height,N_filters]
-    N_square_0 = [0] * N_mat
+
+    ### Get shape and dimensions info for each matrix
     N_square_cum = [0] * (N_mat+1)
     count = 0
     for idx in range(N_mat):
         shape_mat = mat_list[idx].shape
-        N_square_0[idx//N_mat_per_row] += np.ceil(np.sqrt(shape_mat[3]))
         N_square_cum[idx+1] = N_square_cum[idx] + np.ceil(np.sqrt(shape_mat[3]))
         shp.append([shape_mat[1],shape_mat[2],shape_mat[3],int(np.ceil(np.sqrt(shape_mat[3])))])
     
@@ -84,7 +81,6 @@ def merge_frame(mat_list,txt_list=None,option=None,window_size=[1000,1000],borde
                 t_N_square_max = 0
                 idx_row += 1
                 
-        # N_square_per_column += N_square_max
         
         t_square_size = (window_size[0]-100) // max(max(t_square_per_row),sum(t_N_square_per_column))
         if(t_square_size>square_size):
@@ -93,30 +89,28 @@ def merge_frame(mat_list,txt_list=None,option=None,window_size=[1000,1000],borde
             row = t_row
         else:
             break
-        # for idx in range(N_mat):
-    # # exit()
-    # print(shp)
-    # print(row)
 
-    # print(N_square_per_column)
-    # print(square_size)
-
+    ### Defines size for borders between matrices (big_border), between filters (small_border)
     small_border = [1,1]
     big_border = [25,25]
 
+
+    ### Dimension for each filter (excluding border)
     real_square_size = [square_size - small_border[0]] * 2
 
+    ### Array initialization for location of first pixel for each matrix
     pixel_x = [big_border[0]] * N_mat
     pixel_y = [big_border[1]] * N_mat
     idx_col = big_border[1]
     for idx in range(1,N_mat):
-        
         if(row[idx]==row[idx-1]):
             pixel_x[idx] = pixel_x[idx-1] + shp[idx-1][3] * square_size + big_border[0]
         else:
             idx_col += N_square_per_column[row[idx-1]] * square_size + big_border[1]
         pixel_y[idx] = int(idx_col) 
 
+
+    ### Write the matrices into a single frame
     B = np.zeros((window_size[0],window_size[1],1))-1
     for idx in range(N_mat):
         mat = mat_list[idx]
@@ -125,16 +119,20 @@ def merge_frame(mat_list,txt_list=None,option=None,window_size=[1000,1000],borde
         N_square_total = shp[idx][2]
         start_idx = pixel_x[idx] 
         start_jdx = pixel_y[idx] 
-        for square_idx in range(N_square_x):
-            for square_jdx in range(N_square_x):
-                if(filter_N<N_square_total):
-                    filter_ij = cv2.resize(mat[0,:,:,filter_N],tuple(real_square_size))
-                    B[start_jdx:start_jdx + real_square_size[1],start_idx:start_idx + real_square_size[0],0] = filter_ij
-                    filter_N += 1
-                start_jdx = start_jdx + square_size
-            start_idx = start_idx + square_size
-            start_jdx = pixel_y[idx] 
+        
+        if(start_idx+N_square_x*square_size < window_size[0]):
+            for square_idx in range(N_square_x):
+                for square_jdx in range(N_square_x):
+                    if(filter_N<N_square_total):
+                        filter_ij = cv2.resize(mat[0,:,:,filter_N],tuple(real_square_size))
+                        B[start_jdx:start_jdx + real_square_size[1],start_idx:start_idx + real_square_size[0],0] = filter_ij
+                        filter_N += 1
+                    start_jdx = start_jdx + square_size
+                start_idx = start_idx + square_size
+                start_jdx = pixel_y[idx] 
 
+
+    ### Color tuning for the final output
     mask = np.copy(B)
     mask[mask>-1] = 0
     mask[mask==-1] = 255
@@ -144,10 +142,12 @@ def merge_frame(mat_list,txt_list=None,option=None,window_size=[1000,1000],borde
     C = cv2.applyColorMap(C, cv2.COLORMAP_JET)
     D = cv2.bitwise_and(C,C,mask=mask)
 
+
+    ### Text added for each matrix
     for idx in range(N_mat): 
         cv2.putText
         C = cv2.subtract(C,D)
-        D[:,:] = [150,160,150]
+        D[:,:] = background_rgb
         D = cv2.bitwise_and(D,D,mask=mask)
         C = cv2.add(C,D)
 
