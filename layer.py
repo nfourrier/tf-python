@@ -50,19 +50,8 @@ class fullyconnected_layer(Layer):
                          trainable=self.trainable,
                          name=self.scope+'/biases')
         x = tf.reshape(self.inp, [-1, input_size])
-        self.out = tf.nn.bias_add(tf.matmul(x, self.weights), self.biases)
-        if(activation=='relu'):
-            temp = tf.nn.bias_add(tf.matmul(x, self.weights), self.biases)
-            self.out = tf.nn.relu(temp,name=self.scope+'-out')
-        elif(activation=='leaky'):
-            alpha = 0.1
-            temp = tf.nn.bias_add(tf.matmul(x, self.weights), self.biases)
-            self.out = tf.maximum(alpha * temp,temp,name = self.scope+'-out')
-        elif(activation=='softmax'):
-            temp = tf.nn.bias_add(tf.matmul(x, self.weights), self.biases)
-            self.out = tf.nn.softmax(temp)
-        else:
-            temp = tf.nn.bias_add(tf.matmul(x, self.weights), self.biases,name= self.scope+'-out')
+        
+        self.out = tf.nn.bias_add(tf.matmul(x, self.weights), self.biases,name= self.scope+'-out')
         return self.out
 
 class deconvolutional_layer_same(Layer):
@@ -94,21 +83,15 @@ class deconvolutional_layer_same(Layer):
                          name=self.scope+'/biases')
         padder = [[padding, padding]] * 2
         temp = tf.pad(self.inp, [[0, 0]] + padder + [[0, 0]])
-        print(temp.get_shape(),self.weights.get_shape(),stride,size)
         deconv = tf.nn.conv2d_transpose(temp, self.weights, output_shape,
                                         strides=[1] + [stride] * 2 + [1], 
                                         padding='SAME') ## SAME
-        print(temp.get_shape(),deconv.get_shape())
         out = tf.nn.bias_add(deconv, self.biases)
         # print(self.out)
 
         if(add_layers):
             out = tf.add(out,target_layer)
-        if(activation=='softmax'):
-            # self.out = tf.nn.softmax(self.out+tf.constant(value=1e-10))
-            print('la2')
-            out = tf.nn.softmax(out,name=self.scope+'/softmax')
-            # print(self.out)
+
         self.out = tf.identity(out,name=self.scope+'/deconv')
         return self.out
 
@@ -144,13 +127,12 @@ class deconvolutional_layer(Layer):
         pd2 = int((inp_shp[1]-1)*stride+size-out_shp[1])
         deconv = tf.nn.conv2d_transpose(temp, self.weights, output_shape,
                                         strides=[1] + [stride] * 2 + [1], 
-                                        padding='VALID') ## SAME
+                                        padding='VALID') 
         self.out = tf.nn.bias_add(deconv, self.biases)
 
         if(add_layers):
             self.out = tf.add(self.out,target_layer)
-        if(activation=='softmax'):
-            self.out = tf.nn.softmax(self.out)
+
 
         return self.out
 
@@ -173,15 +155,8 @@ class convolutional_layer(Layer):
         if(batch_norm): 
             temp = self.batch_normalization(self.weights, self.biases, temp, filters, self.scope, self.trainable)        
         
-        if(activation=='relu'):
-            temp = tf.nn.bias_add(temp, self.biases)
-            self.out = tf.nn.relu(temp,name=self.scope+'-out')
-        elif(activation=='leaky'):
-            alpha = 0.1
-            temp = tf.nn.bias_add(temp, self.biases)
-            self.out = tf.maximum(alpha * temp,temp,name = self.scope+'-out')
-        else:
-            self.out = tf.nn.bias_add(temp, self.biases, name=self.scope+'-out')
+        
+        self.out = tf.nn.bias_add(temp, self.biases, name=self.scope+'-out')
         return self.out
 
     def batch_normalization(self,weights, biases, inp, filters, scope, trainable):
