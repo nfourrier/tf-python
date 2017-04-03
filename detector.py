@@ -191,6 +191,18 @@ class Detector(object):
         layer_input = [self.model.layers[x] for x in layer]
         return self.sess.run(layer_input,feed_dict={self.x: preprocessed})
 
+    def analyze_gradients(self,feed_dict):
+        grad = self.sess.run([self.gradients],feed_dict=feed_dict)[0]
+        all_var = tf.trainable_variables()
+        
+        print("\t-- GRAD --")
+        for idx in range(len(grad)):
+            var = grad[idx][0]
+            
+            print('\t- mean {2:+010.8e} -mean(abs) {3:+010.8e} - min/max {4:+010.8e} / {5:+010.8e} - {0:>25} - {1:>15}'.format(all_var[idx].name,str(var.shape),var.mean(),abs(var).mean(),var.min(),var.max()))
+        print("\t-- END GRAD --")
+        return grad
+        
     def image_detector(self, image,meta=None):
         preprocessed = self.preprocess(image,self.meta)
         net_out = self.detect(preprocessed)
