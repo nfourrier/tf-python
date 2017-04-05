@@ -3,17 +3,32 @@ import tensorflow as tf
 import tensorflow.contrib.slim as slim
 
 class Layer(object):
+    '''
+    Abstract parent class for all layers.
+    To create a new class, say sm_layer:
+
+        class sm_layer(Layer):
+            def setup(self, arg1, arg2):
+                self.out = arg1 + arg2
+                return self.out
+    '''
     def __init__(self,*args):
         self._params = list(args)
         self.type = list(args)[0]
         self.number = list(args)[1]
+        self.dim = list(args)[2]
         self.weights = None
         self.biases = None
         self.out = None
         self.scope = '{}-{}'.format(self.number,self.type)
-        print(*args)
-        self.setup(*args[2:]) # set attr up 
+        try:
+            self.setup(*args[3:]) # set attr up 
+        except Exception as e:
+            print('\t Error in layer {} with type {} \n\t Input parameters: {}'.format(self.number,self.type,*args[2:]))
+            print(e)
+            raise
     def setup(self, *args): pass
+
 
 class dropout_layer(Layer):
     def setup(self, stride):
@@ -24,7 +39,7 @@ class connected_layer(Layer):
         self.stride = stride
 
 class maxpool_layer(Layer):
-    def setup(self, size, stride, padding, inp):
+    def setup(self, inp, size, stride, padding):
         # self.scope = str(idx)+'-maxpool'
         self.inp = inp[0]
         self.out = tf.nn.max_pool(
@@ -36,7 +51,7 @@ class maxpool_layer(Layer):
         return self.out
 
 class fullyconnected_layer(Layer):
-    def setup(self,N_output,activation,inp):
+    def setup(self,inp,N_output,activation):
         self.inp = inp[0]
         self.trainable = False
         input_size = int(np.prod(self.inp.get_shape()[1:]))
@@ -55,7 +70,7 @@ class fullyconnected_layer(Layer):
         return self.out
 
 class deconvolutional_layer_same(Layer):
-    def setup(self, size, stride, padding, output_shape,activation,trainable,inp):
+    def setup(self, inp, size, stride, padding, output_shape,activation,trainable):
         self.inp = inp[0]
         
         add_layers = False
@@ -96,7 +111,7 @@ class deconvolutional_layer_same(Layer):
         return self.out
 
 class deconvolutional_layer(Layer):
-    def setup(self, size, stride, padding, output_shape,activation,trainable,inp):
+    def setup(self, inp, size, stride, padding, output_shape,activation,trainable):
         self.inp = inp[0]
         
         add_layers = False
@@ -137,7 +152,7 @@ class deconvolutional_layer(Layer):
         return self.out
 
 class convolutional_layer(Layer):
-    def setup(self,size,channels,filters,channels,stride,padding,batch_norm,activation,inp):
+    def setup(self,inp,size,channels,filters,channels,stride,padding,batch_norm,activation):
         self.inp = inp[0]
         self.trainable = False
         channels = self.inp.get_shape()[3]
@@ -210,7 +225,7 @@ class route_layer(Layer):
 
 
 class reorg_layer(Layer):
-    def setup(self, stride, inp):
+    def setup(self, inp, stride):
         print('la',stride,inp)
         self.stride = stride
         self.inp =inp[0]
