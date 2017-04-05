@@ -170,16 +170,12 @@ def convolution(mat,window_size=[1000,1000],border_size=[10,10],frame_index=0):
 
     
     
-
-
-
     
     N_image = 0
     start_idx = 0
     for idx in range(N):
         start_jdx = 0
         for jdx in range(N):
-            
             if(N_image < shp[2]):
                 filter_ij = cv2.resize(mat[:,:,N_image],tuple(resize_size))
                 B[start_idx:start_idx + resize_size[0],start_jdx:start_jdx + resize_size[1],0] = filter_ij
@@ -191,6 +187,23 @@ def convolution(mat,window_size=[1000,1000],border_size=[10,10],frame_index=0):
     else:
         cv2.imshow('d0',B)
         cv2.waitKey();
+
+
+def display(frame):
+    while True:
+        cv2.imshow('frame_{}'.format(1),frame)
+        k = cv2.waitKey(30)
+        # print(k)
+        if k in [-1,255]:
+            continue
+        elif(k in [27,113,99]):
+            exit("Interrupted by user")
+        else: 
+            break
+    # if cv2.waitKey(1) & 0xFF == ord('q'):
+    #     break
+
+    # cv2.waitKey();
 
 def show():
     cv2.waitKey()
