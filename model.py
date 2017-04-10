@@ -4,8 +4,9 @@ import tensorflow as tf
 import dasakl.nn.layer as lay
 class mmodel(object):
     def __init__(self,):
-        self.name = 'yolo'
-
+        self.name = 'default'
+        self._layers = {}
+        self._variables = {}
 
     def parse(self,cfg_file):
         from dasakl.nn.parser import get_layers
@@ -26,18 +27,14 @@ class mmodel(object):
     def get_model(self,layers):
         inp = [self.inp]
 
-        self._layers = {}
-        self._variables = {}
-
         N_layer = 0
         for layer in layers:
             param = layer
 
             if(N_layer==0):
-                param[-1] = [self.inp]
+                param[3] = [self.inp]
             else:
-                param[-1] = [self.layers['{}_{}'.format(param[-1][idx][0],param[-1][idx][1])] for idx in range(len(param[-1]))]
-            
+                param[3] = [self.layers['{}_{}'.format(param[-1][idx][0],param[-1][idx][1])] for idx in range(len(param[-1]))]
             tf_layer = lay.create_layer(*param)
             self._layers['{}_{}'.format(param[0],param[1])] = tf_layer.out
             N_layer += 1
@@ -62,6 +59,19 @@ class mmodel(object):
 
         f.close()
         print('\t ... weights loaded')
+
+
+    @property
+    def layers(self):
+        return self._layers_list
+
+    @property
+    def layers_dico(self):
+        return self._layers
+
+    @property
+    def variables(self):
+        return self._variables
         
 
 
