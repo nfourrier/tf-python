@@ -24,26 +24,49 @@ class mmodel(object):
         return self.inp
 
 
+
     def get_model(self,layers):
         inp = [self.inp]
 
+
+
         N_layer = 0
+        # print(inp[0].get_shape(),'input')
+        self._layers_list.append([self.inp.name,self.inp,'input'])
+        self._layers['input'] = self.inp
         for layer in layers:
             param = layer
 
             if(N_layer==0):
                 param[3] = [self.inp]
             else:
-                param[3] = [self.layers['{}_{}'.format(param[-1][idx][0],param[-1][idx][1])] for idx in range(len(param[-1]))]
+                # print(param[-1])
+                param[3] = [self._layers['{}_{}'.format(param[3][idx][0],param[3][idx][1])] for idx in range(len(param[3]))]
+            
             tf_layer = lay.create_layer(*param)
             self._layers['{}_{}'.format(param[0],param[1])] = tf_layer.out
+            self._layers_list.append([tf_layer.out.name,tf_layer.out,'{}_{}'.format(param[0],param[1])])
+            
             N_layer += 1
+
+
+            # if(param[0]=='fullyconnected'):
+            #     self._layers['flatten_input'] = tf_layer.flatten[0]
+            #     self._layers['flatten_output'] = tf_layer.flatten[1]
+                # self._layers['flatten_output_transpose'] = tf_layer.flatten[1]
+        self.out = tf.identity(tf_layer.out,name='output')
+        self._layers['output'] = self.out
+        self._layers_list.append([self.out.name,self.out,'output'])
+
+
         
         for var in tf.global_variables(): ### old version was tf.all_variables()
-            # print(var.name)
+            
             self._variables[var.name] = var
 
-        return self.inp,self._layers['{}_{}'.format(param[0],param[1])],self._variables
+        return self.inp,self.out,self._variables
+
+
 
 
     def load_weights(self,session,filename,layers=None):
