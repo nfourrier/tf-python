@@ -202,31 +202,15 @@ class convolutional_layer(Layer):
         args.update({key : w})
         return slim.batch_norm(inp, **args)
 
-class leaky_layer(Layer):    
-    def setup(self,inp):
-        # self.scope = str(idx)+'-leaky'
-        self.inp = inp[0]
-        alpha = 0.1
-        self.out = tf.maximum(alpha * self.inp,self.inp,name = self.scope+'-out')
-        return self.out
-
-class relu_layer(Layer):
-    def setup(self,inp):
-        self.inp = inp[0]
-        self.out = tf.nn.relu(self.inp)
-        return self.out
 
 class route_layer(Layer):
     def setup(self, *args):
-        # self.scope = str(idx+'-route')
-        # self.inp = *args
         self.out = tf.concat(*args,3,name=self.scope+'-out')
         return self.out
 
 
 class reorg_layer(Layer):
     def setup(self, inp, stride):
-        print('la',stride,inp)
         self.stride = stride
         self.inp =inp[0]
         self. out = tf.extract_image_patches(self.inp, [1,stride,stride,1], [1,stride,stride,1], [1,1,1,1], 'VALID',name=self.scope+'-out')
