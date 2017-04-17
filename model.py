@@ -6,6 +6,7 @@ class mmodel(object):
     def __init__(self,):
         self.name = 'default'
         self._layers = {}
+        self._layers_list = []
         self._variables = {}
 
     def parse(self,cfg_file):
@@ -20,9 +21,8 @@ class mmodel(object):
 
 
     def set_input(self,dim):
-        self.inp = tf.placeholder(tf.float32,[None]+dim)
+        self.inp = tf.placeholder(tf.float32,[None]+dim,name='input')
         return self.inp
-
 
 
     def get_model(self,layers):
@@ -50,10 +50,7 @@ class mmodel(object):
             N_layer += 1
 
 
-            # if(param[0]=='fullyconnected'):
-            #     self._layers['flatten_input'] = tf_layer.flatten[0]
-            #     self._layers['flatten_output'] = tf_layer.flatten[1]
-                # self._layers['flatten_output_transpose'] = tf_layer.flatten[1]
+            
         self.out = tf.identity(tf_layer.out,name='output')
         self._layers['output'] = self.out
         self._layers_list.append([self.out.name,self.out,'output'])
@@ -61,28 +58,10 @@ class mmodel(object):
 
         
         for var in tf.global_variables(): ### old version was tf.all_variables()
-            
             self._variables[var.name] = var
 
+        
         return self.inp,self.out,self._variables
-
-
-
-
-    def load_weights(self,session,filename,layers=None):
-        import h5py
-        f = h5py.File(filename,'r')
-        print('Load weights from {} \n \t last modified: {} \n \t ...'.format(filename,time.ctime(os.path.getmtime(filename))))
-        if(isinstance(layers,type(None))):
-            layers = self._variables.keys() 
-        for name in layers:
-            gp,dat = name.split("/")
-            print(name,np.prod(f[gp][dat].value.shape),self._variables[name].get_shape())
-            session.run(self._variables[name].assign(f[gp][dat].value))
-
-        f.close()
-        print('\t ... weights loaded')
-
 
     @property
     def layers(self):
@@ -95,7 +74,32 @@ class mmodel(object):
     @property
     def variables(self):
         return self._variables
+
+    def load_weights(self,session,filename,layers=None):
+        import h5py
+        f = h5py.File(filename,'r')
+        print('Load weights from {} \n \t last modified: {} \n \t ...'.format(filename,time.ctime(os.path.getmtime(filename))))
+        if(isinstance(layers,type(None))):
+            layers = self._variables.keys() 
         
+
+        for name in layers:
+            gp,dat = name.split("/")
+           
+            # print(name,gp,dat,var_dict[name].get_shape(),f[gp][dat].shape)
+            # print(name,f[gp][dat].value.mean())
+            # print(name)
+            # print(f[gp][dat].value.mean())
+            # print(f[gp][dat].value)
+            # print(name,np.prod(f[gp][dat].value.shape),self._variables[name].get_shape(),self._variables[name],f[gp][dat].value.dtype)
+
+            session.run(self._variables[name].assign(f[gp][dat].value))
+            # print(f[gp][dat].value.mean())
+            
+        f.close()
+        print('\t ... weights loaded')
+        # exit()
+
 
 
 class tf_vgg(tf_model):
