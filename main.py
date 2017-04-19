@@ -1,9 +1,4 @@
 import os
-import pickle
-from utils import *
-import h5py
-import model
-import tensorflow as tf
 from detector import Detector
 
 head = 'example'
