@@ -207,3 +207,9 @@ def display(frame):
 
 def show():
     cv2.waitKey()
+
+def main():
+    print('Not implemented')
+
+if __name__ == '__main__':
+    main()
