@@ -221,10 +221,45 @@ def batch_to_time(value, dilation, name=None):
         return tf.reshape(transposed,[tf.div(shape[0], dilation), -1, shape[2]])
 
 class causal_convolutional_1d(Layer):
-    # def setup(self,size,channels,filters,stride,padding,kernel,batch_norm,activation,trainable,inp):
     def setup(self,inp,kernel_size,in_size,out_size,stride,padding,kernel,batch_norm,activation,trainable):
-        print("Not implemented")
-        return inp
+        self.inp = inp[0]
+        
+        in_size = self.inp.get_shape()[2]
+        
+        self.trainable = bool(trainable)
+
+        self.weights = tf.Variable(
+                         tf.truncated_normal([kernel_size, int(in_size), out_size],stddev=0.1),
+                         # tf.truncated_normal([1, kernel_size, int(in_size), out_size],stddev=0.1), ######### 1d case treated as 2d
+                         trainable=trainable,
+                         name=self.scope+'/kernel')
+        # self.biases = tf.Variable(
+        #                  tf.constant(0.1, shape=[out_size]),
+        #                  trainable=trainable,
+        #                  name=self.scope+'/biases')
+
+        
+        
+        padding = [[0, 0], [(kernel_size - 1) * dilation + int((kernel_size-1)/2)*dilation, (kernel_size - 1) * dilation + int((kernel_size-1)/2)*dilation], [0, 0]]
+        
+        padded = tf.pad(self.inp, padding)
+
+        if dilation > 1:
+            transformed = time_to_batch(padded, dilation)
+            conv = tf.nn.conv1d(transformed, self.weights, stride=1, padding='VALID')
+            restored = batch_to_time(conv, dilation)
+        else:
+            restored = tf.nn.conv1d(padded, self.weights, stride=1, padding='VALID')
+        # Remove excess elements at the end.
+        temp = tf.slice(restored,
+                          [0, (kernel_size - 1) * dilation, 0],
+                          [-1, tf.shape(self.inp)[1], -1])
+                          # [-1, -1, -1])
+
+        alpha = -1
+        beta = -1
+        self.out = create_layer('activation',self.number,self.dim,[temp],activation,alpha,beta,self.scope).out
+        return self.out
 
 class route_layer(Layer):
     def setup(self, *args):
