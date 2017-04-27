@@ -203,6 +203,29 @@ class convolutional_layer(Layer):
         return slim.batch_norm(inp, **args)
 
 
+def time_to_batch(value, dilation, name=None):
+    with tf.name_scope('time_to_batch'):
+        shape = tf.shape(value)
+        pad_elements = dilation - 1 - (shape[1] + dilation - 1) % dilation
+        padded = tf.pad(value, [[0, 0], [0, pad_elements], [0, 0]])
+        reshaped = tf.reshape(padded, [-1, dilation, shape[2]])
+        transposed = tf.transpose(reshaped, perm=[1, 0, 2])
+        return tf.reshape(transposed, [shape[0] * dilation, -1, shape[2]])
+
+
+def batch_to_time(value, dilation, name=None):
+    with tf.name_scope('batch_to_time'):
+        shape = tf.shape(value)
+        prepared = tf.reshape(value, [dilation, -1, shape[2]])
+        transposed = tf.transpose(prepared, perm=[1, 0, 2])
+        return tf.reshape(transposed,[tf.div(shape[0], dilation), -1, shape[2]])
+
+class causal_convolutional_1d(Layer):
+    # def setup(self,size,channels,filters,stride,padding,kernel,batch_norm,activation,trainable,inp):
+    def setup(self,inp,kernel_size,in_size,out_size,stride,padding,kernel,batch_norm,activation,trainable):
+        print("Not implemented")
+        return inp
+
 class route_layer(Layer):
     def setup(self, *args):
         self.out = tf.concat(*args,3,name=self.scope+'-out')
@@ -223,6 +246,7 @@ layers = {
     'fullyconnected': fullyconnected_layer,
     'convolutional': convolutional_layer,
     'deconvolutional': deconvolutional_layer,
+    'causal_convolutional_1d': causal_convolutional_1d,
     'leaky': leaky_layer,
     'relu': relu_layer,
     'route': route_layer,
