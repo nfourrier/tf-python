@@ -220,6 +220,45 @@ def batch_to_time(value, dilation, name=None):
         transposed = tf.transpose(prepared, perm=[1, 0, 2])
         return tf.reshape(transposed,[tf.div(shape[0], dilation), -1, shape[2]])
 
+
+class res_block(Layer):
+    def setup(self,inp,kernel_size,out_size,stride,dilation,batch_norm,activation,trainable):
+        
+        if(isinstance(dilation,type(int(1)))):
+            dilation = [dilation]
+
+
+        self.inp = inp[0]
+        self.trainable = bool(trainable)
+        self.activation = activation
+
+
+        inp = self.inp
+        print('res',inp)
+        for r in dilation:
+            s = self.single_aconv1d(inp, size=7, dilation=r,scope=self.scope + '_aconv_{}'.format(r))
+            inp = s
+        self.out = s
+        print(self.out)
+        return self.out
+
+    def single_aconv1d(self,inp, size, dilation, scope):
+        args = (
+                [inp],#inp
+                size,#kernel_size
+                128,#out_size
+                1,#stride
+                dilation,#dilation
+                False,#batch_norm
+                self.activation,#activation
+                self.trainable,#trainable
+                scope#scope
+                )
+        self.out = create_layer('causal_convolutional_1d',self.number,self.dim,
+                *args
+                ).out
+        return self.out
+        
 class causal_convolutional_1d(Layer):
     def setup(self,inp,kernel_size,in_size,out_size,stride,padding,kernel,batch_norm,activation,trainable):
         self.inp = inp[0]
