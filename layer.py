@@ -234,15 +234,28 @@ class res_block(Layer):
 
 
         inp = self.inp
-        print('res',inp)
+        out = 0
+        # print('res',inp)
         for r in dilation:
-            s = self.single_aconv1d(inp, size=7, dilation=r,scope=self.scope + '_aconv_{}'.format(r))
-            inp = s
-        self.out = s
+            print(inp)
+            conv_filter = self.single_aconv1d(inp, size=7, dilation=r, activation='tanh',scope=self.scope + '_aconv_{}_{}'.format('filter',r))
+            # print(conv_filter)
+            # exit()
+            conv_gate = self.single_aconv1d(inp, size=7, dilation=r, activation='sigmoid',scope=self.scope + '_aconv_{}_{}'.format('gate',r))
+            # print(conv_gate)
+            res = conv_filter * conv_gate
+            ######### missing conv1d
+            out += res
+
+            inp = inp + res
+
+        self.out = out
+        # exit()
         print(self.out)
+        # exit()
         return self.out
 
-    def single_aconv1d(self,inp, size, dilation, scope):
+    def single_aconv1d(self,inp, size, dilation, activation, scope):
         args = (
                 [inp],#inp
                 size,#kernel_size
@@ -250,7 +263,7 @@ class res_block(Layer):
                 1,#stride
                 dilation,#dilation
                 False,#batch_norm
-                self.activation,#activation
+                activation,#activation
                 self.trainable,#trainable
                 scope#scope
                 )
@@ -258,7 +271,7 @@ class res_block(Layer):
                 *args
                 ).out
         return self.out
-        
+
 class causal_convolutional_1d(Layer):
     def setup(self,inp,kernel_size,in_size,out_size,stride,padding,kernel,batch_norm,activation,trainable):
         self.inp = inp[0]
