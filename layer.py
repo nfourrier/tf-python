@@ -272,6 +272,25 @@ class res_block(Layer):
                 ).out
         return self.out
 
+    def single_conv1d(self,inp, size, activation, scope):
+        args = (
+                [inp],#inp
+                size,#kernel_size
+                0,#in_size
+                128,#out_size
+                1,#stride
+                0,#padding
+                'identity',#kernel
+                False,#batch_norm
+                activation,#activation
+                self.trainable,#trainable
+                scope#scope
+                )
+        self.out = create_layer('convolutional_1d',self.number,self.dim,
+                *args
+                ).out
+        return self.out
+
 class causal_convolutional_1d(Layer):
     def setup(self,inp,kernel_size,in_size,out_size,stride,padding,kernel,batch_norm,activation,trainable):
         self.inp = inp[0]
