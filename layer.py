@@ -244,7 +244,9 @@ class res_block(Layer):
             conv_gate = self.single_aconv1d(inp, size=7, dilation=r, activation='sigmoid',scope=self.scope + '_aconv_{}_{}'.format('gate',r))
             # print(conv_gate)
             res = conv_filter * conv_gate
-            ######### missing conv1d
+            # print(res)
+            res =  self.single_conv1d(res, size=1, activation='tanh',scope=self.scope + '_conv_{}_{}'.format('out',r))
+            # exit()
             out += res
 
             inp = inp + res
@@ -271,7 +273,7 @@ class res_block(Layer):
                 *args
                 ).out
         return self.out
-
+    # inp,kernel_size,in_size,out_size,stride,padding,kernel,batch_norm,activation,trainable,scope=''
     def single_conv1d(self,inp, size, activation, scope):
         args = (
                 [inp],#inp
