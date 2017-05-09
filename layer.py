@@ -355,6 +355,7 @@ layers = {
     'convolutional': convolutional_layer,
     'deconvolutional': deconvolutional_layer,
     'causal_convolutional_1d': causal_convolutional_1d,
+    'res_block': res_block,
     'leaky': leaky_layer,
     'relu': relu_layer,
     'route': route_layer,
