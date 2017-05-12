@@ -328,7 +328,73 @@ class Detector(object):
                 print('Weight file saved: {}'.format(file_save))
         return 0
 
+    def batch_generator(self,**kwargs):
+        print(kwargs)
 
+        source = kwargs['source']
+        dtypes = kwargs['dtypes']
+        out_dtypes = dtypes
+        capacity = kwargs['capacity']
+        num_threads = kwargs['num_threads']
+        def func(src_list):
+            # print(src_list)
+            # label, wave_file
+            mfcc_file,label = src_list
+
+            tmp = mfcc_file.decode('utf-8').split("/")[-1]
+            # print('in batch_generator',tmp)
+            
+            # decode string to integer
+            label = self.read_output(label.decode('utf-8'),self.meta)[0]
+
+            # load mfcc
+            # print("kdkdkk",mfcc_file)
+            # mfcc = np.load(mfcc_file.decode('utf-8'), allow_pickle=False)
+            # load wave file
+
+            mfcc = self.preprocess(mfcc_file.decode('utf-8'),self.meta)[0]
+            # print(src_list,mfcc.shape)
+
+            return mfcc, label
+        def enqueue_func(sess, op):
+            # read data from source queue
+
+            data = func(src_list=sess.run(source))
+            # create feeder dict
+            # print(data)
+            feed_dict = {}
+            for ph, col in zip(placeholders, data):
+                feed_dict[ph] = col
+            # run session
+            sess.run(op, feed_dict=feed_dict)
+
+
+        # print('in sg_producer_func placeholders')
+        # create place holder list
+        placeholders = []
+        for dtype in dtypes:
+            placeholders.append(tf.placeholder(dtype=dtype))
+        # print(placeholders)
+        
+        # create FIFO queue
+
+        fifo_queue = tf.FIFOQueue(capacity, dtypes=out_dtypes)
+
+        # enqueue operation
+        enqueue_op = fifo_queue.enqueue(placeholders)
+
+        # create queue runner
+
+
+        # exit()
+        runner = queue._FuncQueueRunner(enqueue_func, fifo_queue, [enqueue_op] * num_threads)
+
+        # register to global collection
+        tf.train.add_queue_runner(runner)
+        
+        # return de-queue operation
+        # print('in sg_producer_func end')
+        return fifo_queue.dequeue()
 
     
 
