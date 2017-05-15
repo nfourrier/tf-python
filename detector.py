@@ -17,19 +17,73 @@ import h5py
 
 
 class Detector(object):
-    def __init__(self, cfg, weights=None, GPU=True):
+    def __init__(self, cfg=None, weights=None, framework=None, training_parameters=None, GPU=True):
+        # tf.reset_default_graph()
+        if(not isinstance(framework,type(None))):
+            if(isinstance(framework,type('string'))):
+                framework = fmwk.create_framework(framework)
+
+        ## Fectch cfg file from framework definition
+        if(isinstance(cfg,type(None))):
+            try: 
+                cfg = framework['cfg']
+            except Exception as e:
+                exit("\t Please specify a cfg file.")
+
+        ## Fetch weights from framework definition
+        if(isinstance(weights,type(None))):
+            try:
+                weights = framework['weights']
+            except Exception as e:
+                print("\t No weights in the initialization")
+
+        self.cfg = cfg
+        self.weights = weights
+        self.gpu = GPU
+        ## Parse cfg file and initialize the model
         self.name = os.path.basename(cfg).split('.')[0]
-        tf.reset_default_graph()
+        
         self.model = mmodel()
-        self.meta,self.layers = self.model.parse(cfg)
+        self.meta,self.layers,self.archi = self.model.parse(cfg)
+        # print(self.archi)
 
-        self.model.set_input(self.meta['inp_size'])
+    # def initialisation(self):
+        self.training = False
 
+        if(not isinstance(framework,type(None))):
+            self.load_framework(framework)  
+
+        if(isinstance(training_parameters,type(None))):
+            self.model.set_input(self.meta['inp_size'])
+        elif(len(training_parameters)>2):
+            self.model.set_input(self.meta['inp_size'])
+            self.training=True
+        else:
+            self.advanced_training_init(training_parameters[0],training_parameters[1])
+            self.model.set_input_tensor(self.x)
+            self.training = True
+
+        ## Load the model from the cfg file
         self.x,self.y,self.var_dict = self.model.get_model(self.layers)
+        
 
-        if(GPU):
+        formatted_variables = self.formatted_variables()
+        # print(formatted_variables)  
+        self.model_text = self.formatted_model()
+        print(self.model_text)
+        
+
+
+        # print(tf.global_variables(),len(tf.global_variables()))
+        # saver = tf.train.Saver()
+        # print(tf.global_variables(),len(tf.global_variables()))
+        # exit()
+        # for lay in list(self.model.layers.keys()):
+        #     print(lay,self.model.layers[lay].shape)
+        # exit()
+        if(self.gpu):
             tf_config = tf.ConfigProto(
-                log_device_placement=False,gpu_options=(tf.GPUOptions(per_process_gpu_memory_fraction=0.80))
+                log_device_placement=False,gpu_options=(tf.GPUOptions(per_process_gpu_memory_fraction=0.80,allow_growth = True))
                         )
         else:
             tf_config = tf.ConfigProto(
@@ -37,8 +91,19 @@ class Detector(object):
 
         self.sess = tf.Session(config=tf_config)
         self.sess.run(tf.global_variables_initializer())
-        
-        
+        # file_save = os.path.join(dasakl.DATA_FOLDER,'weights','segnet_init.hdf5')
+        # f = h5py.File(file_save,'w')
+        # for key in self.var_dict.keys():
+        #     A = self.sess.run(self.var_dict[key])
+        #     f.create_dataset(key,data=A)
+        # f.close()
+        # exit()
+
+
+        if(self.training):
+            self.set_training_parameters(training_parameters[0],training_parameters[1])
+
+        ## Load weights if it exists        
         if(not isinstance(weights,type(None))):
             self.model.load_weights(self.sess,weights)
 
