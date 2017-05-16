@@ -28,6 +28,10 @@ class Layer(object):
             print(e)
             raise
     def setup(self, *args): pass
+    
+    def __str__(self):
+        return "Layer {0}: {1} \n\t IN: {2}\n\tOUT: {3}".format(self.number,self.type,self.inp,self.out)
+  
 
 
 class dropout_layer(Layer):
