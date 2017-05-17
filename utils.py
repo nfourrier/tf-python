@@ -7,21 +7,12 @@ from collections import defaultdict
 
 class DataSet(object):
     def __init__(self, images, labels=None, fake_data=False, first_shuffle=False):
-        # if fake_data:
-        #     self._num_examples = 10000
-        # else:
-        #     if labels is not None:
-        #         assert images.shape[0] == labels.shape[0], (
-        #             "images.shape: %s labels.shape: %s" % (images.shape,
-        #                                                    labels.shape))
         if(isinstance(images,type([]))):
             images = np.asarray(images)
         if(isinstance(labels,type([]))):
             labels = np.asarray(labels)
 
         self._num_examples = images.shape[0]
-        # images = images.astype(np.float32)
-        # images = np.multiply(images, 1.0 / 255.0)
         self._images = images
         self._labels = labels
         self._epochs_completed = 0
@@ -66,3 +57,16 @@ class DataSet(object):
 
 
 
+class Printer():
+    """
+    Print things to stdout on one line dynamically
+    Usage
+    for currentPercent in range(100):
+        output = "%f of %d completed." % (currentPercent,100)
+        output += "[{}{}]".format("="*int(currentPercent/10),"."*(10-(int(currentPercent/10))))
+        Printer(output)
+    """
+    def __init__(self,data):
+ 
+        sys.stdout.write("\r\x1b[K"+data.__str__())
+        sys.stdout.flush()
