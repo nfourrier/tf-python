@@ -461,7 +461,81 @@ class Detector(object):
         # print('in sg_producer_func end')
         return fifo_queue.dequeue()
 
-    
+    def advanced_training_init(self,input_list,output_list):
+        # N_samples = self.data.N_samples
+
+
+
+        params = self.meta
+        self.inputs = input_list
+        self.targets = output_list
+
+
+
+
+        prep = self.preprocess(self.inputs[0],self.meta)
+        read = self.read_output(self.targets[0],self.meta)
+        input_type = tf.float32 if 'float' in str(prep.dtype) else tf.int64
+        input_shape = tuple(params['inp_size'])
+        target_type = tf.float32 if 'float' in str(read.dtype) else tf.int64
+        target_shape = tuple([int(x) for x in str(params['target_shape']).split(',')])
+        target_shape = [x for x in target_shape if x != 0]
+        target_shape = [None if x==-1 else x for x in target_shape]
+        input_shape = [x for x in input_shape if x != 0]
+        input_shape = [None if x==-1 else x for x in input_shape]
+
+
+        # print(input_shape,target_shape)
+        # exit()
+        # print(prep.shape,prep.dtype,input_type)
+        # print(read.shape,read.dtype,target_type)
+        # print(params['target_shape'])
+        # print(tuple([int(x) for x in str(params['target_shape']).split(',')]))
+
+        # exit()
+        self.batch_size = params['batch_size']
+        self.N_samples = len(self.inputs)
+        self.N_batch = int(self.N_samples/self.batch_size)
+
+        label_t = tf.convert_to_tensor(self.targets)
+        mfcc_file_t = tf.convert_to_tensor(self.inputs)
+
+        # label_t = tf.convert_to_tensor(label)
+        # mfcc_file_t = tf.convert_to_tensor(mfcc_file)
+
+        
+
+        # create queue from constant tensor
+        mfcc_file_q, label_q  \
+            = tf.train.slice_input_producer([mfcc_file_t,label_t], shuffle=True)
+
+
+
+        # create label, mfcc queue
+        # from data import _load_mfcc
+
+        capacity = 128
+        num_threads = 2
+        capacity_batch = self.batch_size*2
+        capacity_batch = 128
+        mfcc_q,label_q = self.batch_generator(source=[mfcc_file_q, label_q ],
+                        dtypes=[input_type, target_type],
+                        capacity=capacity, num_threads=num_threads)
+
+
+
+        # create batch queue with dynamic pad
+        batch_queue = tf.train.batch([mfcc_q, label_q ], self.batch_size,
+                                     shapes=[input_shape, target_shape],
+                                     num_threads=8, capacity=capacity_batch,
+                                     dynamic_pad=True)
+
+
+        
+
+
+        self.x, self.y_true = batch_queue
+
 
 def main():
     print('Not implemented')
