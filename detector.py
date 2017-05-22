@@ -535,7 +535,73 @@ class Detector(object):
 
 
         self.x, self.y_true = batch_queue
+    def train2(self):
+        train_timer = Timer()
+        load_timer = Timer()
+        epoch_timer = Timer()
+        batch_timer = Timer()
 
+        step = -1
+        N_back_up = 0
+
+
+        coord = tf.train.Coordinator()
+
+
+        train_timer.tic()
+        try:
+            # start queue thread
+            threads = tf.train.start_queue_runners(self.sess, coord)
+            
+            for epoch in range(1, self.N_epochs + 1):
+                epoch_timer.tic()
+                loss_avg = 0.
+                epoch_loss = 0
+                epoch_acc = 0
+                for batch in range(self.N_batch):
+                    batch_timer.tic()
+                    step = step + 1
+                    # run session
+                    train_timer.tic()
+                    acc, loss, _ = self.sess.run([self.accuracy,self.loss, self.train_op])
+                    train_timer.toc()
+                    epoch_loss += np.sum(loss)
+                    epoch_acc += np.sum(acc)
+                    # loss history update
+                    # if batch_loss is not None and \
+                    #         not np.isnan(batch_loss.all()) and not np.isinf(batch_loss.all()):
+                    #     loss_avg += np.mean(batch_loss)
+
+                    batch_timer.toc()
+                    if(step%self.display_step==0):
+                        print('\t Epoch {0}: {1}/{2} --acc = {3:09.1f} --loss = {4:09.4f} --batch_time = {5:06.2f} --batch_time = {5:06.2f}'.format(
+                            epoch,batch+1,self.N_batch,epoch_acc/(batch+1),np.mean(loss),batch_timer.diff,train_timer.diff))
+                epoch_timer.toc()
+                
+                print('Epoch {0}: --loss = {1:09.4f} --time = {2:06.2f}'.format(
+                        epoch,epoch_loss/(self.N_batch*self.batch_size),epoch_timer.diff))
+                # print('{} - Testing finished on {}.(CTC loss={})'.format(epoch,'TRAIN', loss_avg))
+                self.logger.add(epoch,epoch_loss,epoch_acc,epoch_timer.diff)
+                self.logger_last.add(epoch,epoch_loss,epoch_acc,epoch_timer.diff)
+                # final average
+                loss_avg /= self.N_batch * 1
+                if(epoch%self.save_epoch==0):
+                    N_back_up = np.mod(N_back_up+1,2)
+                    file_save = self.weight_save_file.format(self.name,str(N_back_up))
+                    f = h5py.File(self.weight_save_file.format(self.name,str(N_back_up)),'w')
+                    for key in self.var_dict.keys():
+                        A = self.sess.run(self.var_dict[key])
+                        # print(key,A.mean())
+                        f.create_dataset(key,data=A)
+                    f.close()
+                    print('Weight file saved: {}'.format(file_save))
+                
+        finally:
+            # stop queue thread
+            train_timer.toc()
+            coord.request_stop()
+            # wait thread to exit.
+            coord.join(threads)
 
 def main():
     print('Not implemented')
