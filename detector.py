@@ -401,7 +401,7 @@ class Detector(object):
         return 0
 
     def batch_generator(self,**kwargs):
-        print(kwargs)
+        
 
         source = kwargs['source']
         dtypes = kwargs['dtypes']
@@ -409,23 +409,12 @@ class Detector(object):
         capacity = kwargs['capacity']
         num_threads = kwargs['num_threads']
         def func(src_list):
-            # print(src_list)
-            # label, wave_file
             mfcc_file,label = src_list
 
             tmp = mfcc_file.decode('utf-8').split("/")[-1]
-            # print('in batch_generator',tmp)
-            
-            # decode string to integer
             label = self.read_output(label.decode('utf-8'),self.meta)[0]
 
-            # load mfcc
-            # print("kdkdkk",mfcc_file)
-            # mfcc = np.load(mfcc_file.decode('utf-8'), allow_pickle=False)
-            # load wave file
-
             mfcc = self.preprocess(mfcc_file.decode('utf-8'),self.meta)[0]
-            # print(src_list,mfcc.shape)
 
             return mfcc, label
         def enqueue_func(sess, op):
@@ -433,7 +422,6 @@ class Detector(object):
 
             data = func(src_list=sess.run(source))
             # create feeder dict
-            # print(data)
             feed_dict = {}
             for ph, col in zip(placeholders, data):
                 feed_dict[ph] = col
@@ -441,31 +429,24 @@ class Detector(object):
             sess.run(op, feed_dict=feed_dict)
 
 
-        # print('in sg_producer_func placeholders')
         # create place holder list
         placeholders = []
         for dtype in dtypes:
             placeholders.append(tf.placeholder(dtype=dtype))
-        # print(placeholders)
+
         
         # create FIFO queue
-
         fifo_queue = tf.FIFOQueue(capacity, dtypes=out_dtypes)
 
         # enqueue operation
         enqueue_op = fifo_queue.enqueue(placeholders)
 
         # create queue runner
-
-
-        # exit()
         runner = queue._FuncQueueRunner(enqueue_func, fifo_queue, [enqueue_op] * num_threads)
 
         # register to global collection
         tf.train.add_queue_runner(runner)
         
-        # return de-queue operation
-        # print('in sg_producer_func end')
         return fifo_queue.dequeue()
 
     def advanced_training_init(self,input_list,output_list):
@@ -492,34 +473,14 @@ class Detector(object):
         input_shape = [None if x==-1 else x for x in input_shape]
 
 
-        # print(input_shape,target_shape)
-        # exit()
-        # print(prep.shape,prep.dtype,input_type)
-        # print(read.shape,read.dtype,target_type)
-        # print(params['target_shape'])
-        # print(tuple([int(x) for x in str(params['target_shape']).split(',')]))
-
-        # exit()
         self.batch_size = params['batch_size']
         self.N_samples = len(self.inputs)
         self.N_batch = int(self.N_samples/self.batch_size)
 
         label_t = tf.convert_to_tensor(self.targets)
         mfcc_file_t = tf.convert_to_tensor(self.inputs)
+        mfcc_file_q, label_q = tf.train.slice_input_producer([mfcc_file_t,label_t], shuffle=True)
 
-        # label_t = tf.convert_to_tensor(label)
-        # mfcc_file_t = tf.convert_to_tensor(mfcc_file)
-
-        
-
-        # create queue from constant tensor
-        mfcc_file_q, label_q  \
-            = tf.train.slice_input_producer([mfcc_file_t,label_t], shuffle=True)
-
-
-
-        # create label, mfcc queue
-        # from data import _load_mfcc
 
         capacity = 128
         num_threads = 2
@@ -575,9 +536,6 @@ class Detector(object):
                     epoch_loss += np.sum(loss)
                     epoch_acc += np.sum(acc)
                     # loss history update
-                    # if batch_loss is not None and \
-                    #         not np.isnan(batch_loss.all()) and not np.isinf(batch_loss.all()):
-                    #     loss_avg += np.mean(batch_loss)
 
                     batch_timer.toc()
                     if(step%self.display_step==0):
@@ -587,7 +545,7 @@ class Detector(object):
                 
                 print('Epoch {0}: --loss = {1:09.4f} --time = {2:06.2f}'.format(
                         epoch,epoch_loss/(self.N_batch*self.batch_size),epoch_timer.diff))
-                # print('{} - Testing finished on {}.(CTC loss={})'.format(epoch,'TRAIN', loss_avg))
+
                 self.logger.add(epoch,epoch_loss,epoch_acc,epoch_timer.diff)
                 self.logger_last.add(epoch,epoch_loss,epoch_acc,epoch_timer.diff)
                 # final average
@@ -598,7 +556,6 @@ class Detector(object):
                     f = h5py.File(self.weight_save_file.format(self.name,str(N_back_up)),'w')
                     for key in self.var_dict.keys():
                         A = self.sess.run(self.var_dict[key])
-                        # print(key,A.mean())
                         f.create_dataset(key,data=A)
                     f.close()
                     print('Weight file saved: {}'.format(file_save))
