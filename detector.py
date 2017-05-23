@@ -256,6 +256,13 @@ class Detector(object):
         layer_input = [self.model.layers[x] for x in layer]
         return self.sess.run(layer_input,feed_dict={self.x: preprocessed})
 
+    def eval_loss(self,inp,target):
+        preprocessed = self.preprocess(inp,self.meta)
+        tar = self.read_output(target,self.meta)
+        res = self.get_loss(self.y,self.y_true,self.meta)
+        out = self.sess.run(res,feed_dict={self.x:preprocessed,self.y_true:tar})
+        return out
+
     def analyze_gradients(self,feed_dict):
         grad = self.sess.run([self.gradients],feed_dict=feed_dict)[0]
         all_var = tf.trainable_variables()
