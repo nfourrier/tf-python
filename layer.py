@@ -225,6 +225,103 @@ def batch_to_time(value, dilation, name=None):
         return tf.reshape(transposed,[tf.div(shape[0], dilation), -1, shape[2]])
 
 
+class convolutional_1d_layer(Layer):
+    # def setup(self,size,channels,filters,stride,padding,kernel,batch_norm,activation,trainable,inp):
+    def setup(self,inp,kernel_size,in_size,out_size,stride,padding,kernel,batch_norm,activation,trainable,scope=''):
+        '''
+        PADDING = VALID OR SAME
+        "VALID" = without padding:
+        inputs:         1  2  3  4  5  6  7  8  9  10 11 (12 13)
+                        |________________|                dropped
+                                        |_________________|
+
+        "SAME" = with zero padding:
+                    pad|                                      |pad
+        inputs:      0 |1  2  3  4  5  6  7  8  9  10 11 12 13|0  0
+                    |________________|
+                                   |_________________|
+                                                  |________________|                                        
+        '''
+        # self.scope = str(self.number)+'-convolutional'
+
+        # print(inp,kernel_size,in_size,out_size,stride,padding,kernel,batch_norm,activation,trainable,scope)
+        if(scope!=''):
+            self.scope=scope
+        
+        self.inp = inp[0]
+        self.trainable = bool(trainable)
+
+        in_size = self.inp.get_shape()[2]
+
+        self.weights = tf.Variable(
+                         tf.truncated_normal([kernel_size, int(in_size), out_size],stddev=0.1),
+                         trainable=trainable,
+                         name=self.scope+'/kernel')
+        self.biases = tf.Variable(
+                         tf.constant(0., shape=[out_size]),
+                         trainable=trainable,
+                         name=self.scope+'/biases')
+        # print(tf.trainable_variables())
+        padder = [[padding, padding]] * 1
+        # print(self.scope,'inp',inp[0].get_shape())
+        temp = tf.pad(self.inp, [[0, 0]] + padder + [[0, 0]])
+        # print(self.scope,'pad-{}'.format(padding),temp.get_shape())
+        # print(padder,stride,kernel_size,self.inp,temp)
+        temp = tf.nn.conv1d(temp, self.weights, padding = 'VALID', name = self.scope, stride = stride)
+
+        if(batch_norm): 
+            temp = self.batch_normalization(self.weights, self.biases, temp, out_size, self.scope, self.trainable)        
+        
+        temp = tf.nn.bias_add(temp, self.biases)
+        alpha = -1
+        beta = -1
+        self.out = create_layer('activation',self.number,self.dim,[temp],activation,alpha,beta,self.scope).out
+
+
+        # if(activation=='relu'):
+        #     temp = tf.nn.bias_add(temp, self.biases)
+        #     self.out = tf.nn.relu(temp,name=self.scope+'-out')
+        # elif(activation=='tanh'):
+        #     temp = tf.nn.bias_add(temp, self.biases)
+        #     self.out = tf.tanh(temp,name = self.scope+'-out')
+        # elif(activation=='leaky'):
+        #     alpha = 0.1
+        #     temp = tf.nn.bias_add(temp, self.biases)
+        #     self.out = tf.maximum(alpha * temp,temp,name = self.scope+'-out')
+        # else:
+        #     self.out = tf.nn.bias_add(temp, self.biases, name=self.scope+'-out')
+        # print(self.out)
+        return self.out
+
+    def batch_normalization(self,weights, biases, inp, filters, scope, trainable):
+        args = [0., 1e-2, filters]
+        moving_mean = np.random.normal(*args)
+        moving_variance = np.random.normal(*args)
+        gamma = np.random.normal(*args)
+
+        moving_mean = tf.constant_initializer(moving_mean)
+        moving_variance = tf.constant_initializer(moving_variance)
+        gamma = tf.constant_initializer(gamma)
+
+        args = dict({
+            'center' : False, 'scale' : True,
+            'epsilon': 1e-5, 'scope' : scope,
+            'is_training': False
+            })
+        v = tf.__version__.split('.')[1]
+        # if int(v) < 12: key = 'initializers'
+        # else: key = 'param_initializers'
+        key = 'param_initializers'
+        w = {}
+        w['moving_mean'] = moving_mean
+        w['moving_variance'] = moving_variance
+        w['gamma'] = gamma
+        w['kernel'] = weights
+        w['biases'] = biases
+
+        args.update({key : w})
+        return slim.batch_norm(inp, **args)
+
 class res_block(Layer):
     def setup(self,inp,kernel_size,out_size,stride,dilation,batch_norm,activation,trainable):
         
