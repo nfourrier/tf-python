@@ -116,22 +116,42 @@ class deconvolutional_layer_same(Layer):
 
 class deconvolutional_layer(Layer):
     def setup(self, inp, size, stride, padding, output_shape,activation,trainable):
+        '''
+        Args:
+            inp: list of tf layers
+                the second element of inp is the target layer used to determine the shape of the deconv output
+        input_shape: `(samples, rows, cols, channels)`
+        output_shape: Output shape of the transposed convolution operation.
+        tuple of integers (nb_samples, nb_output_rows, nb_output_cols, nb_filter)
+        
+        Formula for calculation of the output shape [1], [2]:
+        o = s (i - 1) + a + k - 2p, \quad a \in \{0, \ldots, s - 1\}
+        where:
+            - i - input size (rows or cols),
+            - k - kernel size (nb_filter),
+            - s - stride (subsample for rows or cols respectively),
+            - p - padding size,
+            - a - user-specified quantity used to distinguish between
+            -     the s different possible output sizes.
+        Because a is not specified explicitly and Theano and Tensorflow
+        use different values, it is better to use a dummy input and observe
+        the actual output shape of a layer as specified in the examples.
+        # References
+        [1] [A guide to convolution arithmetic for deep learning](https://arxiv.org/abs/1603.07285 "arXiv:1603.07285v1 [stat.ML]")
+        [2] [Transposed convolution arithmetic](http://deeplearning.net/software/theano_versions/dev/tutorial/conv_arithmetic.html#transposed-convolution-arithmetic)
+        [3] [Deconvolutional Networks](http://www.matthewzeiler.com/pubs/cvpr2010/cvpr2010.pdf)
+        '''
         self.inp = inp[0]
         
-        add_layers = False
-        if(output_shape[0]<0):
-            target_layer = inp[1]
-            out_features = target_layer.get_shape()[3].value 
-            output_shape = tf.shape(target_layer)
-            add_layers = True
-        else:
-            out_features = output_shape[2]
-            input_shape = tf.shape(self.inp)
-            output_shape = tf.stack([input_shape[0]]+output_shape)
+        input_shape = tf.shape(self.inp)
+        input_shape = self.inp.get_shape()[1].value
+        input_shape = [self.inp.get_shape()[x].value for x in range(4)]
 
-
-        in_features = self.inp.get_shape()[3].value
+        output_shape = [None] + output_shape
+        tf_output_shape = tf.stack([tf.shape(self.inp)[0]]+output_shape[1:])
         
+        in_features = input_shape[3]
+        out_features = output_shape[3]        
         
         self.weights = tf.Variable(
                          tf.truncated_normal([size, size, out_features, in_features],stddev=0.1),
@@ -141,20 +161,31 @@ class deconvolutional_layer(Layer):
                          tf.constant(0.1, shape=[out_features]),
                          trainable=trainable,
                          name=self.scope+'/biases')
+
         padder = [[padding, padding]] * 2
         temp = tf.pad(self.inp, [[0, 0]] + padder + [[0, 0]])
-        pd2 = int((inp_shp[1]-1)*stride+size-out_shp[1])
-        deconv = tf.nn.conv2d_transpose(temp, self.weights, output_shape,
+        
+        pad_total = int((input_shape[1]-1)*stride+size-output_shape[1])
+        pad_before = int(pad_total/2)
+        pad_after = pad_total - pad_before
+        tf_output_shape = tf.stack([tf.shape(temp)[0]]+[output_shape[1]+pad_total,output_shape[2]+pad_total,output_shape[3]])
+
+        deconv = tf.nn.conv2d_transpose(temp, self.weights, tf_output_shape,
                                         strides=[1] + [stride] * 2 + [1], 
-                                        padding='VALID') 
-        self.out = tf.nn.bias_add(deconv, self.biases)
+                                        padding='VALID') ## SAME
+        deconv = tf.slice(deconv,tf.stack([0,pad_before,pad_before,0]),tf.stack([-1,output_shape[1],output_shape[2],-1]))
 
-        if(add_layers):
-            self.out = tf.add(self.out,target_layer)
+        temp = tf.nn.bias_add(deconv, self.biases)
 
+        if(len(inp) > 1):
+            temp = tf.add(temp,inp[1])
+        alpha = -1
+        beta = -1
+        self.out = create_layer('activation',self.number,self.dim,[temp],activation,alpha,beta,self.scope).out
 
         return self.out
 
+        
 class convolutional_layer(Layer):
     def setup(self,inp,size,channels,filters,channels,stride,padding,batch_norm,activation):
         self.inp = inp[0]
