@@ -185,7 +185,7 @@ class deconvolutional_layer(Layer):
 
         return self.out
 
-        
+
 class convolutional_layer(Layer):
     def setup(self,inp,size,channels,filters,channels,stride,padding,batch_norm,activation):
         self.inp = inp[0]
@@ -275,8 +275,7 @@ class convolutional_1d_layer(Layer):
         '''
         # self.scope = str(self.number)+'-convolutional'
 
-        # print(inp,kernel_size,in_size,out_size,stride,padding,kernel,batch_norm,activation,trainable,scope)
-        if(scope!=''):
+                if(scope!=''):
             self.scope=scope
         
         self.inp = inp[0]
@@ -292,12 +291,11 @@ class convolutional_1d_layer(Layer):
                          tf.constant(0., shape=[out_size]),
                          trainable=trainable,
                          name=self.scope+'/biases')
-        # print(tf.trainable_variables())
+        
         padder = [[padding, padding]] * 1
-        # print(self.scope,'inp',inp[0].get_shape())
+        
         temp = tf.pad(self.inp, [[0, 0]] + padder + [[0, 0]])
-        # print(self.scope,'pad-{}'.format(padding),temp.get_shape())
-        # print(padder,stride,kernel_size,self.inp,temp)
+        
         temp = tf.nn.conv1d(temp, self.weights, padding = 'VALID', name = self.scope, stride = stride)
 
         if(batch_norm): 
@@ -309,19 +307,7 @@ class convolutional_1d_layer(Layer):
         self.out = create_layer('activation',self.number,self.dim,[temp],activation,alpha,beta,self.scope).out
 
 
-        # if(activation=='relu'):
-        #     temp = tf.nn.bias_add(temp, self.biases)
-        #     self.out = tf.nn.relu(temp,name=self.scope+'-out')
-        # elif(activation=='tanh'):
-        #     temp = tf.nn.bias_add(temp, self.biases)
-        #     self.out = tf.tanh(temp,name = self.scope+'-out')
-        # elif(activation=='leaky'):
-        #     alpha = 0.1
-        #     temp = tf.nn.bias_add(temp, self.biases)
-        #     self.out = tf.maximum(alpha * temp,temp,name = self.scope+'-out')
-        # else:
-        #     self.out = tf.nn.bias_add(temp, self.biases, name=self.scope+'-out')
-        # print(self.out)
+
         return self.out
 
     def batch_normalization(self,weights, biases, inp, filters, scope, trainable):
@@ -479,6 +465,7 @@ class reorg_layer(Layer):
         self. out = tf.extract_image_patches(self.inp, [1,stride,stride,1], [1,stride,stride,1], [1,1,1,1], 'VALID',name=self.scope+'-out')
         return self.out
 
+  
 layers = {
     'dropout': dropout_layer,
     'connected': connected_layer,
@@ -487,6 +474,7 @@ layers = {
     'convolutional': convolutional_layer,
     'deconvolutional': deconvolutional_layer,
     'causal_convolutional_1d': causal_convolutional_1d,
+    'convolutional_1d': convolutional_1d_layer,
     'res_block': res_block,
     'leaky': leaky_layer,
     'relu': relu_layer,
