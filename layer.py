@@ -521,7 +521,18 @@ def softplus(inp,*args):
     return out      
         
         
-      
+activation_functions = {        
+        'identity': identity,       
+        'linear': identity,     
+        'softmax': softmax,     
+        'relu': relu,       
+        'leaky': leaky,     
+        'elu': elu,     
+        'softplus': softplus,       
+        'softsign': softsign,       
+        'tanh': tanh,       
+        'sigmoid': sigmoid,     
+        }       
 ##########################################################
 
 
