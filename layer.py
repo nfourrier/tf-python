@@ -483,6 +483,49 @@ layers = {
 }        
 
 
+##########################################################      
+################## ACTIVATIONS FUNCTIONS #################      
+def identity(inp,*args):        
+    out = inp       
+    return out      
+def softmax(inp,*args):     
+    out = tf.nn.softmax(inp)        
+    return out      
+def leaky(inp,alpha=0.1,*args):     
+    if(alpha==-1):      
+        alpha = 0.1     
+    out = tf.maximum(alpha * inp,inp)       
+    return out      
+def relu(inp,*args):        
+    out = tf.nn.relu(inp)       
+    return out      
+def tanh(inp,*args):        
+    out = tf.tanh(inp)      
+    return out      
+def sigmoid(inp,*args):     
+    out = tf.sigmoid(inp)       
+    return out      
+def softsign(inp,*args):        
+    out = tf.nn.softsign(x)     
+    return out      
+def elu(inp,alpha,*args):       
+    out = tf.nn.elu(x)      
+    if alpha == -1:     
+        alpha = 1       
+        
+    if alpha != 1:      
+        out = tf.where(inp > 0, out, alpha * out)       
+    return out      
+def softplus(inp,*args):            
+    out = tf.nn.softplus(inp)       
+    return out      
+        
+        
+      
+##########################################################
+
+
+
 def create_layer(ltype, num, *args):
     op_class = layers.get(ltype, Layer)
     return op_class(ltype, num, *args)
