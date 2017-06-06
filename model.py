@@ -11,7 +11,7 @@ class mmodel(object):
         self._layers = {}
         self._layers_list = []
         self._variables = {}
-        
+
     def __str__(self):
         return "Layers {0}\nVariables {1}".format(self.layers,self.variables)
 
@@ -44,7 +44,10 @@ class mmodel(object):
         self.inp = tf.placeholder(tf.float32,[None]+dim,name='input')
         return self.inp
 
-
+    def set_input_tensor(self,tensor):
+        self.inp = tf.identity(tensor,name='input')
+        return self.inp
+        
     def get_model(self,layers):
         '''
             Generates and returns the model
