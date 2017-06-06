@@ -11,6 +11,9 @@ class mmodel(object):
         self._layers = {}
         self._layers_list = []
         self._variables = {}
+        
+    def __str__(self):
+        return "Layers {0}\nVariables {1}".format(self.layers,self.variables)
 
     def parse(self,cfg_file):
         ''' 
