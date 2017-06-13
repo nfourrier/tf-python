@@ -358,68 +358,144 @@ class Detector(object):
         load_timer = Timer()
         epoch_timer = Timer()
         batch_timer = Timer()
-    
+        # print("trainable variables")
+        # print([var.name for var in tf.trainable_variables()])
+        # params['batch_size'] = 64
+        # params['N_epoch'] = 1000
+
         N_samples = self.data.N_samples
         N_batch = int(N_samples/self.batch_size)
 
-        step = 0
+        step = -1
         N_back_up = 0
         loss = 0
-        ### Loop for each epoch
-        for epoch in range(1, self.N_epochs + 1):
-            ### Start the timers
-            epoch_loss = 0
-            epoch_acc = 0
-            epoch_timer.tic()
-            load_timer.tic()
 
-            ### Loop for the batches
-            for batch in range(N_batch):
-                step += 1
-                load_timer.tic()
-
-                ### Get next batches as a path in general
-                inputs_path, outputs_path = self.data.next_batch(self.batch_size)
-
-
-                ### Convert the path into the appropriate format for the neural net
-                X_batch = np.concatenate([self.preprocess(x,self.meta) for x in inputs_path], axis=0)
-                Y_batch = np.concatenate([self.read_output(y,self.meta) for y in outputs_path], axis=0)
-
-                load_timer.toc()
-
-                train_timer.tic()
-                feed_dict = {self.x: X_batch, self.y_true: Y_batch}                
-                acc,loss,_ = self.sess.run([self.accuracy,self.loss, self.train_op],feed_dict=feed_dict)
-
-                epoch_loss += loss
-                epoch_acc += acc
-                train_timer.toc()
-                
-                ### Print batch stat every 100 batches (independant from epochs)
-                if(step%100==0):
-                    print('\t Epoch {0}: {1}/{2} --acc = {3:09.1f} --loss = {4:09.4f} --train_time = {5:06.2f} --load_time = {6:06.2f}'.format(
-                        epoch,batch+1,N_batch,epoch_acc/batch+1,loss,train_timer.diff,load_timer.diff))
-
-            epoch_timer.toc()
-
-            ### Print epoch stat
-            print('Epoch {0}: --acc = {1:09.4f} --loss = {2:09.4f} --time = {3:06.2f}'.format(
-                        epoch,epoch_acc,epoch_loss,epoch_timer.diff))
-            ### Write epoch stats to file
-            self.logger.add(epoch,epoch_loss,epoch_acc,epoch_timer.diff)
+        self.sess.close()
+        self.saver = tf.train.Saver() 
+        sv = tf.train.Supervisor(logdir=self.session_path,
+                                 # saver=self.saver,
+                                 # save_model_secs=opt.save_interval,
+                                 # summary_writer=summary_writer,
+                                 # save_summaries_secs=opt.log_interval,
+                                 # global_step=tf.sg_global_step(),
+                                 # local_init_op=tf.sg_phase().assign(True)
+                                 )
+        with sv.managed_session() as sess:
+        # self.sess.close()
+        # sv = tf.train.Supervisor(logdir=self.session_path,
+        #     save_model_secs=0)
+        # self.sess = sv.managed_session()
 
 
-            ### Save weights every save_epoch (every 10 epochs for instances)
-            if(epoch%self.save_epoch==0):
-                N_back_up = np.mod(N_back_up+1,2)
-                file_save = self.weight_save_file.format(self.name,str(N_back_up))
-                f = h5py.File(self.weight_save_file.format(self.name,str(N_back_up)),'w')
-                for key in self.var_dict.keys():
-                    A = self.sess.run(self.var_dict[key])
-                    f.create_dataset(key,data=A)
-                f.close()
-                print('Weight file saved: {}'.format(file_save))
+            ### Loop for each epoch
+            for epoch in range(1, self.N_epochs + 1):
+                ### Start the timers
+                epoch_loss = 0
+                epoch_acc = 0
+                epoch_load_diff = 0
+                epoch_timer.tic()
+                # load_timer.tic()
+
+                ### Loop for the batches
+                # A = self.sess.run('3-convolutional/kernel/Adagrad:0',feed_dict={self.x:self.preprocess('/home/gpu/data/shopkins/img80/000040003.png',self.meta)})
+                # B = self.sess.run('2-convolutional/kernel:0',feed_dict={self.x:self.preprocess('/home/gpu/data/shopkins/img80/000040003.png',self.meta)})
+                # print(A.shape,A.mean())
+                # print(B.shape,B.mean())
+                for batch in range(N_batch):
+                    step += 1
+                    load_timer.tic()
+
+                    ### Get next batches as a path in general
+                    inputs_path, outputs_path = self.data.next_batch(self.batch_size)
+
+                    ### Convert the path into the appropriate format for the neural net
+                    # print(inputs_path)
+                    # print(outputs_path)
+                    X_batch = np.concatenate([self.preprocess(x,self.meta) for x in inputs_path], axis=0)
+                    Y_batch = np.concatenate([self.read_output(y,self.meta) for y in outputs_path], axis=0)
+
+                    # arr = [self.preprocess(x,self.meta) for x in inputs_path]
+                    # mmax = max([x.shape[1] for x in arr])
+                    # dim2 = arr[0].shape[2]
+                    # X_batch = np.concatenate([x.resize(1,mmax,dim2) for x in arr],axis=0)
+
+                    # arr = [self.read_output(y,self.meta) for y in outputs_path]
+                    # mmax = max([x.shape[1] for x in arr])
+                    # Y_batch = np.concatenate([x.resize(1,mmax) for x in arr],axis=0)
+
+                    # import dasakl.nn.vizualisation as viz
+                    # print(inputs_path[0],np.unique(Y_batch[0]))
+                    # viz.display(X_batch[0])
+
+                    
+                    # print(X_batch.shape,Y_batch.shape)
+                    # label_flat = tf.reshape(self.y_true, (-1, 1))
+                    # labels = tf.reshape(tf.one_hot(label_flat, depth=3), (-1, 3))
+
+                    load_timer.toc()
+                    epoch_load_diff += load_timer.diff
+                    train_timer.tic()
+                    # print(X_batch.shape,Y_batch.shape)
+                    feed_dict = {self.x: X_batch, self.y_true: Y_batch}
+                    
+
+                    if(step%self.display_step==0):
+                        print('\t Epoch {0}: {1}/{2} --acc = {3:09.1f} --loss = {4:09.4f} --train_time = {5:06.2f} --load_time = {6:06.2f}'.format(
+                            epoch,batch+1,N_batch,epoch_acc/(batch+1),loss,train_timer.diff,load_timer.diff))
+                        # A = self.sess.run([self.loss,self.y],feed_dict={self.x: X_batch[0:1], self.y_true: Y_batch[0:1]})
+                        # print(A[0],A[1],Y_batch[0],X_batch[0].mean())
+                        tmp = self.analyze_gradients(sess,feed_dict)
+
+
+                    acc,loss,_ = sess.run([self.accuracy,self.loss, self.train_op],feed_dict=feed_dict)
+                    # tmp,acc,loss,_ = self.sess.run([self.gradients,self.accuracy,self.loss, self.train_op],feed_dict=feed_dict)
+
+
+
+                    
+                    
+                    # print(tmp[10])
+                    # print(Y_batch[10])
+                    # print(Y_batch[12,:])
+                    # print(X_batch.shape,Y_batch)
+                    # exit()
+                    # print(acc.shape)
+                    # exit()
+                    # print(tmp.shape,tmp.dtype)
+                    # print(np.unique(tmp[:,0]),tmp[:,0].mean())
+                    # print(np.unique(tmp[:,1]),tmp[:,1].mean())
+                    # print(np.unique(tmp[:,2]),tmp[:,2].mean())
+
+                    epoch_loss += loss
+                    epoch_acc += acc
+                    train_timer.toc()
+                    # print(acc)
+                    # print(y[12,:])
+
+                epoch_timer.toc()
+
+                print('Epoch {0}: --acc = {1:09.4f} --loss = {2:09.4f} --time = {3:06.2f} --load time = {4:06.2f}'.format(
+                            epoch,epoch_acc,epoch_loss,epoch_timer.diff,epoch_load_diff))
+                self.logger.add(epoch,epoch_loss,epoch_acc,epoch_timer.diff)
+                self.logger_last.add(epoch,epoch_loss,epoch_acc,epoch_timer.diff)
+
+                # if(epoch%self.save_epoch==0):
+                #     tmp = self.analyze_gradients(feed_dict)
+                if(epoch%self.save_epoch==0):
+                    N_back_up = np.mod(N_back_up+1,2)
+                    file_save = self.weight_save_file.format(self.name,str(N_back_up))
+                    f = h5py.File(self.weight_save_file.format(self.name,str(N_back_up)),'w')
+                    # for key in self.var_dict.keys():
+                        # A = self.sess.run(self.var_dict[key])
+                    for key in [x.name for x in tf.global_variables()]:
+                        A = sess.run(key)
+                        # print(key,A.mean())
+                        f.create_dataset(key,data=A)
+                    f.close()
+                    session_save = self.session_save_file.format(self.name,str(N_back_up))
+                    self.saver.save(sess, session_save)
+                    print('Weight file saved: {}'.format(file_save))
+                    print('Session file saved: {}'.format(session_save))
         return 0
 
     def batch_generator(self,**kwargs):
