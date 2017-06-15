@@ -89,23 +89,19 @@ class Detector(object):
             tf_config = tf.ConfigProto(
                 log_device_placement=False,device_count = {'GPU': 0})
 
-        self.sess = tf.Session(config=tf_config)
+        self.sess = tf.Session(config=self.tf_config)
         self.sess.run(tf.global_variables_initializer())
-        # file_save = os.path.join(dasakl.DATA_FOLDER,'weights','segnet_init.hdf5')
-        # f = h5py.File(file_save,'w')
-        # for key in self.var_dict.keys():
-        #     A = self.sess.run(self.var_dict[key])
-        #     f.create_dataset(key,data=A)
-        # f.close()
-        # exit()
-
-
-        if(self.training):
-            self.set_training_parameters(training_parameters[0],training_parameters[1])
+        
 
         ## Load weights if it exists        
         if(not isinstance(weights,type(None))):
             self.model.load_weights(self.sess,weights)
+
+        if(self.training):
+            self.set_training_parameters(training_parameters[0],training_parameters[1])
+
+        if(session):
+            self.load_session()
 
     def load_weights(self,filename,layers=None):
         self.model.load_weights(self.sess,filename,layers)
