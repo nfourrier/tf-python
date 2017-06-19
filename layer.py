@@ -465,6 +465,11 @@ class reorg_layer(Layer):
         self. out = tf.extract_image_patches(self.inp, [1,stride,stride,1], [1,stride,stride,1], [1,1,1,1], 'VALID',name=self.scope+'-out')
         return self.out
 
+class normalize_layer(Layer):        
+    def setup(self,inp,norm=2):
+        self.inp = inp[0]
+        self.out = self.inp / tf.expand_dims(tf.sqrt(tf.reduce_sum(tf.pow(tensor,norm),axis=1)),1)
+        return self.out
   
 layers = {
     'dropout': dropout_layer,
