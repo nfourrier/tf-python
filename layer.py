@@ -470,6 +470,26 @@ class normalize_layer(Layer):
         self.inp = inp[0]
         self.out = self.inp / tf.expand_dims(tf.sqrt(tf.reduce_sum(tf.pow(tensor,norm),axis=1)),1)
         return self.out
+
+class lp_pool_layer(Layer):
+    def setup(self,inp, pnorm, kH, kW, dH, dW, padding, name):
+        self.inp = inp[0]
+        if pnorm == 2:
+            pwr = tf.square(self.inp)
+        else:
+            pwr = tf.pow(self.inp, pnorm)
+          
+        subsamp = tf.nn.avg_pool(pwr,
+                              ksize=[1, kH, kW, 1],
+                              strides=[1, dH, dW, 1],
+                              padding='VALID')
+        subsamp_sum = tf.multiply(subsamp, kH*kW)
+        
+        if pnorm == 2:
+            self.out = tf.sqrt(subsamp_sum)
+        else:
+            self.out = tf.pow(subsamp_sum, 1/pnorm)
+        return self.out        
   
 layers = {
     'dropout': dropout_layer,
