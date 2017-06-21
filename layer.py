@@ -471,6 +471,27 @@ class normalize_layer(Layer):
         self.out = self.inp / tf.expand_dims(tf.sqrt(tf.reduce_sum(tf.pow(tensor,norm),axis=1)),1)
         return self.out
 
+class cross_map_lrn(Layer):
+    def setup(self,inp, size=5, bias=1.0, alpha=1.0, beta=0.5):
+        self.inp = inp[0]
+        padding = int(size/2)
+        tensor_pad = tf.pad(self.inp, [[0, 0]] + [[0,0]]*2 + [[padding, padding]])
+
+        tensor_pad = tf.expand_dims(tensor_pad,4)
+
+        squared = tf.square(tensor_pad)
+        in_channels = tensor_pad.get_shape().as_list()[3]
+        kernel = tf.constant(1.0, shape=[1, 1, size, 1,1])
+        squared_sum = tf.nn.conv3d(squared,
+                                           kernel,
+                                           [1, 1, 1, 1,1],
+                                           padding='VALID')[:,:,:,:,0]
+        bias = tf.constant(bias, dtype=tf.float32)
+        alpha = tf.constant(alpha, dtype=tf.float32)
+        beta = tf.constant(beta, dtype=tf.float32)
+        self.out = tensor / ((bias + alpha/size * squared_sum) ** beta)
+        return self.out
+
 class lp_pool_layer(Layer):
     def setup(self,inp, pnorm, kH, kW, dH, dW, padding, name):
         self.inp = inp[0]
