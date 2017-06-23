@@ -552,7 +552,57 @@ class batch_norm(Layer):
 
         self.out = tf.nn.batch_normalization(x, mean, var, beta, gamma, 1e-3)
         return self.out
+
+
+class inception(Layer):   
+    def setup(self,inp, inSize, ks, o1s, o2s1, o2s2, o3s1, o3s2, o4s1, o4s2, o4s3, poolType, name, 
+                  phase_train=True, use_batch_norm=True, weight_decay=0.0):
+      
+        print('name = ', name)
+        print('inputSize = ', inSize)
+        print('kernelSize = {3,5}')
+        print('kernelStride = {%d,%d}' % (ks,ks))
+        print('outputSize = {%d,%d}' % (o2s2,o3s2))
+        print('reduceSize = {%d,%d,%d,%d}' % (o2s1,o3s1,o4s2,o1s))
+        print('pooling = {%s, %d, %d, %d, %d}' % (poolType, o4s1, o4s1, o4s3, o4s3))
+        print("conv for pooling reduceSize = {%d}" % o4s2)
+        if (o4s2>0):
+            o4 = o4s2
+        else:
+            o4 = inSize
+        print('outputSize = ', o1s+o2s2+o3s2+o4)
+        print()
         
+        net = []
+        var_all = {}
+        net_all = {}
+
+        with tf.variable_scope(name):
+            
+            with tf.variable_scope('branch2_3x3'):
+                if o2s1>0:
+                    var_all['branch2_3x3'] = {}
+                    # conv3a,var = conv(inp, inSize, o2s1, 1, 1, 1, 1, 0, 'conv1x1_tmp', phase_train=phase_train, use_batch_norm=use_batch_norm, weight_decay=weight_decay)
+                    # if(name=='incept3cd'):
+                    #     conv3a,var = full_conv2(inp, inSize, o2s1, 1, 1, 1, 1, 0, 'conv1x1', phase_train=phase_train, use_batch_norm=use_batch_norm, weight_decay=weight_decay)    
+                    #     # inp = conv3a 
+                    # else:
+                    conv3a,var = full_conv(inp, inSize, o2s1, 1, 1, 1, 1, 0, 'conv1x1', phase_train=phase_train, use_batch_norm=use_batch_norm, weight_decay=weight_decay)
+                    var_all['branch2_3x3']['conv1x1'] = var
+                    conv3,var = full_conv(conv3a, o2s1, o2s2, 3, 3, ks, ks, 1, 'conv3x3', phase_train=phase_train, use_batch_norm=use_batch_norm, weight_decay=weight_decay)
+                    var_all['branch2_3x3']['conv3x3'] = var
+                    net.append(conv3)
+                    net_all['branch2_3x3'] = conv3
+                    # var_all['branch2_3x3'] = var
+          
+            
+            
+            
+            
+            # exit()
+        return net_all,var_all
+
+
 layers = {
     'dropout': dropout_layer,
     'connected': connected_layer,
