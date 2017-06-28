@@ -604,9 +604,41 @@ class inception(Layer):
                     var_all['branch3_5x5']['conv5x5'] = var
                     net.append(conv5)
                     net_all['branch3_5x5'] = conv5
-            
-            
-            
+
+            with tf.variable_scope('branch4_pool'):
+                if(o4s1==1):
+                    pad = 0
+                elif(o4s1==3):
+                    pad = 1
+                elif(o4s1==5):
+                    pad = 2
+                else:
+                    raise ValueError('pooling padding not ready, max pool can be done with size 1,3,5 "%s"' % poolType)
+                if poolType=='MAX':
+                    pool,_ = mpool(inp, o4s1, o4s1, o4s3, o4s3, pad, 'pool')
+                    pad = 0
+                elif poolType=='L2':
+                    pool,_ = lppool(inp, 2, o4s1, o4s1, o4s3, o4s3, 0, 'pool')
+                else:
+                    raise ValueError('Invalid pooling type "%s"' % poolType)
+                # print(pool)
+                if o4s2>0:
+                    var_all['branch4_pool'] = {}
+                    # if(name=='incept3b'):
+                    #     pool_conv,var = full_conv2(pool, inSize, o4s2, 1, 1, 1, 1, 0, 'conv1x1', phase_train=phase_train, use_batch_norm=use_batch_norm, weight_decay=weight_decay)
+                    # else:
+                    pool_conv,var = full_conv(pool, inSize, o4s2, 1, 1, 1, 1, 0, 'conv1x1', phase_train=phase_train, use_batch_norm=use_batch_norm, weight_decay=weight_decay)
+                    var_all['branch4_pool']['conv1x1'] = var
+                else:
+                    pool_conv = pool
+                # print(pool_conv)
+                if poolType=='L2':
+                    pool_conv = tf.pad(pool_conv, [[0, 0]] + [[pad,pad]]*2 + [[0, 0]])
+                    # print(pool_conv)
+                    # exit()
+                net.append(pool_conv)
+                net_all['branch4_pool'] = pool_conv
+                net_all['branch4_pool2'] = pool
             # exit()
         return net_all,var_all
 
