@@ -578,7 +578,16 @@ class inception(Layer):
         net_all = {}
 
         with tf.variable_scope(name):
-            
+            with tf.variable_scope('branch1_1x1'):
+                if o1s>0:   
+                    conv1,var = full_conv(inp, inSize, o1s, 1, 1, 1, 1, 0, 'conv1x1', phase_train=phase_train, use_batch_norm=use_batch_norm, weight_decay=weight_decay)
+                    net.append(conv1)
+
+                    var_all['branch1_1x1'] = {}
+                    var_all['branch1_1x1']['conv1x1'] = var
+                    net_all['branch1_1x1'] = conv1
+
+
             with tf.variable_scope('branch2_3x3'):
                 if o2s1>0:
                     var_all['branch2_3x3'] = {}
