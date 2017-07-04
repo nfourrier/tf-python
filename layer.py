@@ -648,6 +648,30 @@ class inception(Layer):
                 net.append(pool_conv)
                 net_all['branch4_pool'] = pool_conv
                 net_all['branch4_pool2'] = pool
+
+
+            dims = [int(x.get_shape()[1]) for x in net]
+            dim_target = max(dims)
+            if(min(dims)<dim_target):
+                for idx in range(len(net)):
+                    dim_current = dims[idx]
+                    if(dim_target>dim_current):
+                        diff = dim_target - dim_current
+                        pad = int(diff/2)
+                        net[idx] = tf.pad(net[idx], [[0, 0]] + [[pad,pad+(diff%2)]]*2 + [[0, 0]])
+
+            
+
+            incept = array_ops.concat(net, 3, name=name)
+            
+            for branch in list(var_all.keys()):
+                A = var_all[branch]
+                print(name,branch)
+                for conv_name in list(A.keys()):
+                    B = A[conv_name]
+                    for mat in list(B.keys()):
+                        print(branch,conv_name,mat,B[mat])
+            net_all['output'] = incept
             # exit()
         return net_all,var_all
 
