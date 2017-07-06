@@ -187,26 +187,58 @@ class deconvolutional_layer(Layer):
 
 
 class convolutional_layer(Layer):
-    def setup(self,inp,size,channels,filters,channels,stride,padding,batch_norm,activation):
+    # def setup(self,size,channels,filters,stride,padding,kernel,batch_norm,activation,trainable,inp):
+    def setup(self,inp,kernel_size,in_size,out_size,stride,padding,kernel,batch_norm,activation,trainable):
+        '''
+        It is possible to run the batch normalization before or after the bias.
+        batch_norm is an integer:
+            - 0: no batch normalization (conv2d -> bias -> activation)
+            - 1: batch normalization happens before bias add - YOLO type (conv2d -> batchNorm -> bias -> activation)
+            - 2: batch normalization happens after bias add - INCEPTION type (conv2d -> bias -> batchNorm -> activation)
+        '''
+        
+
+        if(kernel=='edge'):
+            A = np.zeros((kernel_size,kernel_size,in_size,out_size))
+            B = np.expand_dims(kernels['kernel'],axis=2)
+            B = np.repeat(B,in_size,2)
+            B = np.expand_dims(B,axis=3)
+            B = np.repeat(B,out_size,3)
+
+        
         self.inp = inp[0]
-        self.trainable = False
-        channels = self.inp.get_shape()[3]
+        self.trainable = bool(trainable)
+
+        in_size = self.inp.get_shape()[3]
+
         self.weights = tf.Variable(
-                         tf.truncated_normal([size, size, int(channels), filters],stddev=0.1),
-                         trainable=self.trainable,
+                         tf.truncated_normal([kernel_size, kernel_size, int(in_size), out_size],stddev=0.1),
+                         trainable=trainable,
                          name=self.scope+'/kernel')
         self.biases = tf.Variable(
-                         tf.constant(0.1, shape=[filters]),
-                         trainable=self.trainable,
+                         tf.constant(0.1, shape=[out_size]),
+                         trainable=trainable,
                          name=self.scope+'/biases')
+        # print(tf.trainable_variables())
         padder = [[padding, padding]] * 2
+        # print(self.scope,'inp',inp[0].get_shape())
         temp = tf.pad(self.inp, [[0, 0]] + padder + [[0, 0]])
+        # print(self.scope,'pad-{}'.format(padding),temp.get_shape())
+        
         temp = tf.nn.conv2d(temp, self.weights, padding = 'VALID', name = self.scope, strides = [1] + [stride] * 2 + [1])
-        if(batch_norm): 
-            temp = self.batch_normalization(self.weights, self.biases, temp, filters, self.scope, self.trainable)        
-        
-        
-        self.out = tf.nn.bias_add(temp, self.biases, name=self.scope+'-out')
+
+        if(batch_norm==1): 
+            temp = self.batch_normalization(self.weights, self.biases, temp, out_size, self.scope, self.trainable)        
+            temp = tf.nn.bias_add(temp, self.biases)
+        elif(batch_norm==2):
+            temp = tf.nn.bias_add(temp, self.biases)
+            self.batch_normalization(self.weights, self.biases, temp, out_size, self.scope, self.trainable)        
+        else:
+            temp = tf.nn.bias_add(temp, self.biases)
+        alpha = -1
+        beta = -1
+        self.out = create_layer('activation',self.number,self.dim,[temp],activation,alpha,beta,self.scope).out
+
         return self.out
 
     def batch_normalization(self,weights, biases, inp, filters, scope, trainable):
