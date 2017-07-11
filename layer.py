@@ -43,16 +43,68 @@ class connected_layer(Layer):
         self.stride = stride
 
 class maxpool_layer(Layer):
-    def setup(self, inp, size, stride, padding):
+    '''Max pooling layer'''
+    def setup(self, inp, size, stride,pad=0,padding='SAME',scope=''):
+        '''
+        Args:
+            size: int
+                square box side on which the max pool will be computed
+            stride: int
+                number of cells the window is sliding at each iteration
+            inp: tensorflow
+                tensorflow object on which the operation is going 
+        '''
         # self.scope = str(idx)+'-maxpool'
+        if(scope!=''):
+            self.scope=scope
         self.inp = inp[0]
+        inpOp = tf.pad(self.inp, [[0, 0]] + [[pad,pad]]*2 + [[0, 0]])
         self.out = tf.nn.max_pool(
-            self.inp, padding = 'SAME',
+            inpOp, padding = padding,
             ksize = [1] + [size]*2 + [1], 
             strides = [1] + [stride]*2 + [1],
             name = self.scope
         )
         return self.out
+
+class avgpool_layer(Layer):
+    def setup(self, inp, size, stride,pad=0,padding='SAME',scope=''):
+        # self.scope = str(idx)+'-maxpool'
+        if(scope!=''):
+            self.scope=scope
+        self.inp = inp[0]
+        inpOp = tf.pad(self.inp, [[0, 0]] + [[pad,pad]]*2 + [[0, 0]])
+        self.out = tf.nn.avg_pool(
+            inpOp, padding = padding,
+            ksize = [1] + [size]*2 + [1], 
+            strides = [1] + [stride]*2 + [1],
+            name = self.scope
+        )
+        return self.out
+
+
+class lp_pool_layer(Layer):
+    def setup(self,inp, pnorm, size, stride,pad=0, padding='SAME', scope=''):
+        if(scope!=''):
+            self.scope=scope
+        self.inp = inp[0]
+        if pnorm == 2:
+            pwr = tf.square(self.inp)
+        else:
+            pwr = tf.pow(self.inp, pnorm)
+          
+        subsamp = tf.nn.avg_pool(pwr,
+                              ksize=[1, size, size, 1],
+                              strides=[1, stride, stride, 1],
+                              padding=padding)
+
+        subsamp_sum = tf.multiply(subsamp, size*size)
+        
+        if pnorm == 2:
+            self.out = tf.sqrt(subsamp_sum)
+        else:
+            self.out = tf.pow(subsamp_sum, 1/pnorm)
+        return self.out        
 
 class fullyconnected_layer(Layer):
     def setup(self,inp,N_output,activation):
@@ -524,25 +576,7 @@ class cross_map_lrn(Layer):
         self.out = tensor / ((bias + alpha/size * squared_sum) ** beta)
         return self.out
 
-class lp_pool_layer(Layer):
-    def setup(self,inp, pnorm, kH, kW, dH, dW, padding, name):
-        self.inp = inp[0]
-        if pnorm == 2:
-            pwr = tf.square(self.inp)
-        else:
-            pwr = tf.pow(self.inp, pnorm)
-          
-        subsamp = tf.nn.avg_pool(pwr,
-                              ksize=[1, kH, kW, 1],
-                              strides=[1, dH, dW, 1],
-                              padding='VALID')
-        subsamp_sum = tf.multiply(subsamp, kH*kW)
-        
-        if pnorm == 2:
-            self.out = tf.sqrt(subsamp_sum)
-        else:
-            self.out = tf.pow(subsamp_sum, 1/pnorm)
-        return self.out        
+
   
 
 class batch_norm(Layer):
