@@ -555,7 +555,7 @@ class normalize_layer(Layer):
         self.out = self.inp / tf.expand_dims(tf.sqrt(tf.reduce_sum(tf.pow(tensor,norm),axis=1)),1)
         return self.out
 
-class cross_map_lrn(Layer):
+class cross_map_lrn_layer(Layer):
     def setup(self,inp, size=5, bias=1.0, alpha=1.0, beta=0.5):
         self.inp = inp[0]
         padding = int(size/2)
@@ -573,7 +573,7 @@ class cross_map_lrn(Layer):
         bias = tf.constant(bias, dtype=tf.float32)
         alpha = tf.constant(alpha, dtype=tf.float32)
         beta = tf.constant(beta, dtype=tf.float32)
-        self.out = tensor / ((bias + alpha/size * squared_sum) ** beta)
+        self.out = self.inp / ((bias + alpha/size * squared_sum) ** beta)
         return self.out
 
 
