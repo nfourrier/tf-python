@@ -321,7 +321,30 @@ class convolutional_layer(Layer):
         args.update({key : w})
         return slim.batch_norm(inp, **args)
 
-
+def bn(inpOp,scope):
+    n_out = int(inpOp.get_shape()[3])
+    beta = tf.Variable(tf.constant(0.0, shape=[n_out], dtype=inpOp.dtype),
+                   name=scope+'/beta', trainable=True, dtype=inpOp.dtype)
+    gamma = tf.Variable(tf.constant(1.0, shape=[n_out], dtype=inpOp.dtype),
+                        name=scope+'/gamma', trainable=True, dtype=inpOp.dtype)
+    mean = tf.Variable(tf.constant(0.0, shape=[n_out], dtype=inpOp.dtype),
+                        name=scope+'/moving_mean', trainable=True, dtype=inpOp.dtype)
+    var = tf.Variable(tf.constant(1.0, shape=[n_out], dtype=inpOp.dtype),
+                        name=scope+'/moving_variance', trainable=True, dtype=inpOp.dtype)
+    bn = tf.nn.batch_normalization(
+        x=inpOp,
+        mean=mean,
+        variance=var,
+        offset=beta,
+        scale=gamma,
+        variance_epsilon=1e-5,
+        name=scope+'/bn'
+    )
+        # print(beta)
+        # print(gamma)
+        # print(mean)
+        # print(var)
+    return bn,{'mean':mean,'variance':var,'beta':beta,'gamma':gamma}
 def time_to_batch(value, dilation, name=None):
     with tf.name_scope('time_to_batch'):
         shape = tf.shape(value)
