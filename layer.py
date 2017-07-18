@@ -643,126 +643,131 @@ class batch_norm(Layer):
         return self.out
 
 
-class inception(Layer):   
-    def setup(self,inp, inSize, ks, o1s, o2s1, o2s2, o3s1, o3s2, o4s1, o4s2, o4s3, poolType, name, 
-                  phase_train=True, use_batch_norm=True, weight_decay=0.0):
+class inception_layer(Layer):   
+    def setup(self, inp, stride, b1filters1, b3filters1, b3filters2, b5filters1, b5filters2, 
+                b0type, b0size, b0stride, b0pad, b0filters, 
+                  batch_normalization, activation, trainable):
+    # def setup(self, inp, stride, o1s, o2s1, o2s2, o3s1, o3s2, o4s1, o4s2, o4s3, poolType, name, 
+    #               phase_train=True, use_batch_norm=True, weight_decay=0.0):
       
-        print('name = ', name)
-        print('inputSize = ', inSize)
-        print('kernelSize = {3,5}')
-        print('kernelStride = {%d,%d}' % (ks,ks))
-        print('outputSize = {%d,%d}' % (o2s2,o3s2))
-        print('reduceSize = {%d,%d,%d,%d}' % (o2s1,o3s1,o4s2,o1s))
-        print('pooling = {%s, %d, %d, %d, %d}' % (poolType, o4s1, o4s1, o4s3, o4s3))
-        print("conv for pooling reduceSize = {%d}" % o4s2)
-        if (o4s2>0):
-            o4 = o4s2
-        else:
-            o4 = inSize
-        print('outputSize = ', o1s+o2s2+o3s2+o4)
-        print()
+
+        # print('name = ', name)
+        # print('inputSize = ', inSize)
+        # print('kernelSize = {3,5}')
+        # print('kernelStride = {%d,%d}' % (ks,ks))
+        # print('outputSize = {%d,%d}' % (o2s2,o3s2))
+        # print('reduceSize = {%d,%d,%d,%d}' % (o2s1,o3s1,o4s2,o1s))
+        # print('pooling = {%s, %d, %d, %d, %d}' % (poolType, o4s1, o4s1, o4s3, o4s3))
+        # print("conv for pooling reduceSize = {%d}" % o4s2)
+        # if (o4s2>0):
+        #     o4 = o4s2
+        # else:
+        #     o4 = inSize
+        # print('outputSize = ', o1s+o2s2+o3s2+o4)
+        self.inp = inp[0]
+        self.trainable = trainable
+        in_size = self.inp.get_shape()[3]
+        print('self.inp',self.inp)
+        print(in_size)
         
+
+
         net = []
-        var_all = {}
-        net_all = {}
-
-        with tf.variable_scope(name):
-            with tf.variable_scope('branch1_1x1'):
-                if o1s>0:   
-                    conv1,var = full_conv(inp, inSize, o1s, 1, 1, 1, 1, 0, 'conv1x1', phase_train=phase_train, use_batch_norm=use_batch_norm, weight_decay=weight_decay)
-                    net.append(conv1)
-
-                    var_all['branch1_1x1'] = {}
-                    var_all['branch1_1x1']['conv1x1'] = var
-                    net_all['branch1_1x1'] = conv1
+        # def setup(self,inp,kernel_size,in_size,out_size,stride,padding,kernel,batch_norm,activation,trainable,scope=''):
 
 
-            with tf.variable_scope('branch2_3x3'):
-                if o2s1>0:
-                    var_all['branch2_3x3'] = {}
-                    # conv3a,var = conv(inp, inSize, o2s1, 1, 1, 1, 1, 0, 'conv1x1_tmp', phase_train=phase_train, use_batch_norm=use_batch_norm, weight_decay=weight_decay)
-                    # if(name=='incept3cd'):
-                    #     conv3a,var = full_conv2(inp, inSize, o2s1, 1, 1, 1, 1, 0, 'conv1x1', phase_train=phase_train, use_batch_norm=use_batch_norm, weight_decay=weight_decay)    
-                    #     # inp = conv3a 
-                    # else:
-                    conv3a,var = full_conv(inp, inSize, o2s1, 1, 1, 1, 1, 0, 'conv1x1', phase_train=phase_train, use_batch_norm=use_batch_norm, weight_decay=weight_decay)
-                    var_all['branch2_3x3']['conv1x1'] = var
-                    conv3,var = full_conv(conv3a, o2s1, o2s2, 3, 3, ks, ks, 1, 'conv3x3', phase_train=phase_train, use_batch_norm=use_batch_norm, weight_decay=weight_decay)
-                    var_all['branch2_3x3']['conv3x3'] = var
-                    net.append(conv3)
-                    net_all['branch2_3x3'] = conv3
-                    # var_all['branch2_3x3'] = var
-          
-            with tf.variable_scope('branch3_5x5'):
-                if o3s1>0:
-                    var_all['branch3_5x5'] = {}
-                    conv5a,var = full_conv(inp, inSize, o3s1, 1, 1, 1, 1, 0, 'conv1x1', phase_train=phase_train, use_batch_norm=use_batch_norm, weight_decay=weight_decay)
-                    var_all['branch3_5x5']['conv1x1'] = var
-                    conv5,var = full_conv(conv5a, o3s1, o3s2, 5, 5, ks, ks, 2, 'conv5x5', phase_train=phase_train, use_batch_norm=use_batch_norm, weight_decay=weight_decay)
-                    var_all['branch3_5x5']['conv5x5'] = var
-                    net.append(conv5)
-                    net_all['branch3_5x5'] = conv5
+        # args = (
+        #         [self.inp],#inp
+        #         1,#kernel_size
+        #         0,#in_size
+        #         b3filters1,#out_size
+        #         1,#stride
+        #         0,#padding
+        #         'identity',#kernel
+        #         batch_normalization,#batch_norm
+        #         activation,#activation
+        #         self.trainable,#trainable
+        #         '{}-{}-{}'.format(self.number,self.type,'conv1x1_1')#scope
+        #         )
 
-            with tf.variable_scope('branch4_pool'):
-                if(o4s1==1):
-                    pad = 0
-                elif(o4s1==3):
-                    pad = 1
-                elif(o4s1==5):
-                    pad = 2
-                else:
-                    raise ValueError('pooling padding not ready, max pool can be done with size 1,3,5 "%s"' % poolType)
-                if poolType=='MAX':
-                    pool,_ = mpool(inp, o4s1, o4s1, o4s3, o4s3, pad, 'pool')
-                    pad = 0
-                elif poolType=='L2':
-                    pool,_ = lppool(inp, 2, o4s1, o4s1, o4s3, o4s3, 0, 'pool')
-                else:
-                    raise ValueError('Invalid pooling type "%s"' % poolType)
-                # print(pool)
-                if o4s2>0:
-                    var_all['branch4_pool'] = {}
-                    # if(name=='incept3b'):
-                    #     pool_conv,var = full_conv2(pool, inSize, o4s2, 1, 1, 1, 1, 0, 'conv1x1', phase_train=phase_train, use_batch_norm=use_batch_norm, weight_decay=weight_decay)
-                    # else:
-                    pool_conv,var = full_conv(pool, inSize, o4s2, 1, 1, 1, 1, 0, 'conv1x1', phase_train=phase_train, use_batch_norm=use_batch_norm, weight_decay=weight_decay)
-                    var_all['branch4_pool']['conv1x1'] = var
-                else:
-                    pool_conv = pool
-                # print(pool_conv)
-                if poolType=='L2':
-                    pool_conv = tf.pad(pool_conv, [[0, 0]] + [[pad,pad]]*2 + [[0, 0]])
-                    # print(pool_conv)
-                    # exit()
-                net.append(pool_conv)
-                net_all['branch4_pool'] = pool_conv
-                net_all['branch4_pool2'] = pool
+        lay  = []
+        if(b3filters1>0):
+            args = ([self.inp],1,0,b3filters1,1,0,'identity',batch_normalization,
+                    activation,self.trainable,'{}-{}-{}'.format(self.number,self.type,'conv3x3_1'))
+            branch3x3_conv1 = create_layer("convolutional",self.number,self.dim,*args).out
 
 
-            dims = [int(x.get_shape()[1]) for x in net]
-            dim_target = max(dims)
-            if(min(dims)<dim_target):
-                for idx in range(len(net)):
-                    dim_current = dims[idx]
-                    if(dim_target>dim_current):
-                        diff = dim_target - dim_current
-                        pad = int(diff/2)
-                        net[idx] = tf.pad(net[idx], [[0, 0]] + [[pad,pad+(diff%2)]]*2 + [[0, 0]])
+            args = ([branch3x3_conv1],3,0,b3filters2,stride,1,'identity',batch_normalization,
+                    activation,self.trainable,'{}-{}-{}'.format(self.number,self.type,'conv3x3_2'))
+            branch3x3 = create_layer("convolutional",self.number,self.dim,*args).out
+            net.append(branch3x3)
 
+        if(b5filters1>0):
+            args = ([self.inp],1,0,b5filters1,1,0,'identity',batch_normalization,
+                    activation,self.trainable,'{}-{}-{}'.format(self.number,self.type,'conv5x5_1'))
+            branch5x5_conv1 = create_layer("convolutional",self.number,self.dim,*args).out
+
+            args = ([branch5x5_conv1],5,0,b5filters2,stride,2,'identity',batch_normalization,
+                    activation,self.trainable,'{}-{}-{}'.format(self.number,self.type,'conv5x5_2'))
+            branch5x5 = create_layer("convolutional",self.number,self.dim,*args).out
+            net.append(branch5x5)
+        
+        if(b0type=='MAX'):
+            # inp, size, stride,pad=0,padding='SAME',scope=''):
+            args = ([self.inp],b0size, b0stride, b0pad, 'VALID', '{}-{}-{}'.format(self.number,self.type,'maxpool'))
+            branchPool = create_layer("maxpool",self.number,self.dim,*args).out
+        elif(b0type=='L2'):
+            # inp, pnorm, size, stride, padding='VALID',scope
+            args = ([self.inp],2,b0size,b0stride, b0pad, 'VALID', '{}-{}-{}'.format(self.number,self.type,'l2pool'))
+            branchPool = create_layer("lppool",self.number,self.dim,*args).out
+        else:
+            raise ValueError('Invalid pooling type "%s"' % poolType)
+
+        if(b0filters>0):
+            args = ([branchPool],1,0,b0filters,1,0,'identity',batch_normalization,
+                    activation,self.trainable,'{}-{}-{}'.format(self.number,self.type,'convPool'))
+            branchPool = create_layer("convolutional",self.number,self.dim,*args).out
+        net.append(branchPool)
+
+
+        if(b1filters1>0):  
+            args = ([self.inp],1,0,b1filters1,1,0,'identity',batch_normalization,
+                    activation,self.trainable,'{}-{}-{}'.format(self.number,self.type,'conv1x1_1'))
+            branch1x1 = create_layer("convolutional",self.number,self.dim,*args).out
+            net.append(branch1x1)
+
+
+
+        dims = [int(x.get_shape()[1]) for x in net]
+        dim_target = max(dims)
+        if(min(dims)<dim_target):
+            for idx in range(len(net)):
+                dim_current = dims[idx]
+                if(dim_target>dim_current):
+                    diff = dim_target - dim_current
+                    pad = int(diff/2)
+                    net[idx] = tf.pad(net[idx], [[0, 0]] + [[pad,pad+(diff%2)]]*2 + [[0, 0]])
+            # print(net)
+
+        # exit()
+        # for idx in net:
+        #     print(idx)
+        self.out = tf.concat(net, 3, name=self.scope+'/out')
+
+        # for branch in list(var_all.keys()):
+        #     A = var_all[branch]
+        #     print(name,branch)
+        #     for conv_name in list(A.keys()):
+        #         B = A[conv_name]
+        #         for mat in list(B.keys()):
+        #             print(branch,conv_name,mat,B[mat])
+        
             
-
-            incept = array_ops.concat(net, 3, name=name)
-            
-            for branch in list(var_all.keys()):
-                A = var_all[branch]
-                print(name,branch)
-                for conv_name in list(A.keys()):
-                    B = A[conv_name]
-                    for mat in list(B.keys()):
-                        print(branch,conv_name,mat,B[mat])
-            net_all['output'] = incept
-            # exit()
-        return net_all,var_all
+                
+                
+                
+                # exit()
+        return self.out
 
 
 layers = {
