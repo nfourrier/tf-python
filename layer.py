@@ -647,50 +647,15 @@ class inception_layer(Layer):
     def setup(self, inp, stride, b1filters1, b3filters1, b3filters2, b5filters1, b5filters2, 
                 b0type, b0size, b0stride, b0pad, b0filters, 
                   batch_normalization, activation, trainable):
-    # def setup(self, inp, stride, o1s, o2s1, o2s2, o3s1, o3s2, o4s1, o4s2, o4s3, poolType, name, 
-    #               phase_train=True, use_batch_norm=True, weight_decay=0.0):
-      
-
-        # print('name = ', name)
-        # print('inputSize = ', inSize)
-        # print('kernelSize = {3,5}')
-        # print('kernelStride = {%d,%d}' % (ks,ks))
-        # print('outputSize = {%d,%d}' % (o2s2,o3s2))
-        # print('reduceSize = {%d,%d,%d,%d}' % (o2s1,o3s1,o4s2,o1s))
-        # print('pooling = {%s, %d, %d, %d, %d}' % (poolType, o4s1, o4s1, o4s3, o4s3))
-        # print("conv for pooling reduceSize = {%d}" % o4s2)
-        # if (o4s2>0):
-        #     o4 = o4s2
-        # else:
-        #     o4 = inSize
-        # print('outputSize = ', o1s+o2s2+o3s2+o4)
         self.inp = inp[0]
         self.trainable = trainable
         in_size = self.inp.get_shape()[3]
-        print('self.inp',self.inp)
-        print(in_size)
-        
 
-
+        ### store output for each branch
         net = []
-        # def setup(self,inp,kernel_size,in_size,out_size,stride,padding,kernel,batch_norm,activation,trainable,scope=''):
-
-
-        # args = (
-        #         [self.inp],#inp
-        #         1,#kernel_size
-        #         0,#in_size
-        #         b3filters1,#out_size
-        #         1,#stride
-        #         0,#padding
-        #         'identity',#kernel
-        #         batch_normalization,#batch_norm
-        #         activation,#activation
-        #         self.trainable,#trainable
-        #         '{}-{}-{}'.format(self.number,self.type,'conv1x1_1')#scope
-        #         )
-
         lay  = []
+
+        ### 3x3 convolution branch
         if(b3filters1>0):
             args = ([self.inp],1,0,b3filters1,1,0,'identity',batch_normalization,
                     activation,self.trainable,'{}-{}-{}'.format(self.number,self.type,'conv3x3_1'))
@@ -702,6 +667,7 @@ class inception_layer(Layer):
             branch3x3 = create_layer("convolutional",self.number,self.dim,*args).out
             net.append(branch3x3)
 
+        ### 5x5 convolution branch
         if(b5filters1>0):
             args = ([self.inp],1,0,b5filters1,1,0,'identity',batch_normalization,
                     activation,self.trainable,'{}-{}-{}'.format(self.number,self.type,'conv5x5_1'))
@@ -712,6 +678,8 @@ class inception_layer(Layer):
             branch5x5 = create_layer("convolutional",self.number,self.dim,*args).out
             net.append(branch5x5)
         
+
+        ### pooling branch
         if(b0type=='MAX'):
             # inp, size, stride,pad=0,padding='SAME',scope=''):
             args = ([self.inp],b0size, b0stride, b0pad, 'VALID', '{}-{}-{}'.format(self.number,self.type,'maxpool'))
@@ -723,6 +691,8 @@ class inception_layer(Layer):
         else:
             raise ValueError('Invalid pooling type "%s"' % poolType)
 
+
+        ### 1x1 convolution branch
         if(b0filters>0):
             args = ([branchPool],1,0,b0filters,1,0,'identity',batch_normalization,
                     activation,self.trainable,'{}-{}-{}'.format(self.number,self.type,'convPool'))
@@ -737,7 +707,8 @@ class inception_layer(Layer):
             net.append(branch1x1)
 
 
-
+        ### concatenate all branches
+        ### note that branches don't necessarly have the same dimension before concatenation 
         dims = [int(x.get_shape()[1]) for x in net]
         dim_target = max(dims)
         if(min(dims)<dim_target):
@@ -747,26 +718,9 @@ class inception_layer(Layer):
                     diff = dim_target - dim_current
                     pad = int(diff/2)
                     net[idx] = tf.pad(net[idx], [[0, 0]] + [[pad,pad+(diff%2)]]*2 + [[0, 0]])
-            # print(net)
-
-        # exit()
-        # for idx in net:
-        #     print(idx)
         self.out = tf.concat(net, 3, name=self.scope+'/out')
 
-        # for branch in list(var_all.keys()):
-        #     A = var_all[branch]
-        #     print(name,branch)
-        #     for conv_name in list(A.keys()):
-        #         B = A[conv_name]
-        #         for mat in list(B.keys()):
-        #             print(branch,conv_name,mat,B[mat])
-        
-            
-                
-                
-                
-                # exit()
+
         return self.out
 
 
