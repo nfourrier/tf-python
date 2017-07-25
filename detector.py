@@ -203,6 +203,13 @@ class Detector(object):
     def close(self):
         self.sess.close()
 
+
+    def set_TFpreprocess(self,fct):
+        self.TFpreprocess = fct
+
+    def set_TFpostprocess(self,fct):
+        self.TFpostprocess = fct
+        
     def set_preprocess(self,fct):
         self.preprocess = fct
 
