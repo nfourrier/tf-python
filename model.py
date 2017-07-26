@@ -47,6 +47,10 @@ class mmodel(object):
         self.inp = tf.identity(tensor,name='input')
         return self.inp
         
+    def set_preprocess(self,fct):
+        self.preprocess = fct
+    def set_postprocess(self,fct):
+        self.postprocess = fct
     def get_model(self,layers):
         '''
             Generates and returns the model
