@@ -70,6 +70,15 @@ class mmodel(object):
 
         self._layers_list.append([self.inp.name,self.inp,'input'])
         self._layers['input'] = self.inp
+
+        if(not isinstance(self.preprocess,type(None))):
+            tmp = self.preprocess(self.inp,meta)
+        else:
+            tmp = self.inp
+        self.inp_preprocess = tf.identity(tmp,name='input_preprocess')
+        self._layers_list.append([self.inp_preprocess.name,self.inp_preprocess,'input_preprocess'])
+        self._layers['input_preprocess'] = self.inp_preprocess
+
         for layer in layers:
             param = layer
 
