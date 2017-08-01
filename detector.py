@@ -270,7 +270,7 @@ class Detector(object):
 
 
     def detect(self,inputs):
-        net_output = self.sess.run(self.y, feed_dict={self.x: inputs})
+        net_output = self.sess.run(self.y_postprocess, feed_dict={self.x: inputs})
         return net_output
 
 
@@ -690,4 +690,4 @@ def main():
     print('Not implemented')
 
 if __name__ == '__main__':
-    main()
+main()
