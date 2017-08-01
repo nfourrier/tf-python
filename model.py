@@ -97,6 +97,13 @@ class mmodel(object):
         self._layers['output'] = self.out
         self._layers_list.append([self.out.name,self.out,'output'])
 
+        if(not isinstance(self.postprocess,type(None))):
+            tmp = self.postprocess(self.inp,self.out,meta)
+        else:
+            tmp = self.out
+        self.out_postprocess = tf.identity(tmp,name='output_postprocess')
+        self._layers['output_postprocess'] = self.out_postprocess
+        self._layers_list.append([self.out_postprocess.name,self.out_postprocess,'output_postprocess'])
 
         
         for var in tf.global_variables(): ### old version was tf.all_variables()
