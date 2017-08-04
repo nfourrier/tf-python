@@ -1,4 +1,3 @@
-from __future__ import absolute_import
 import tensorflow as tf
 import numpy as np
 import cv2
@@ -7,22 +6,12 @@ from copy import deepcopy
 import json 
 import math 
 import pandas as pd
-import dasakl
-# import dasakl.nn.layer as lay
-
-from dasakl.nn.model import mmodel,optimizer
-
-from dasakl.nn.parser import get_layers,blm
+import layer as lay
+from model import mmodel,generic_model,optimizer
+from parser import get_layers
 from dasakl.utils import Timer, DataSet, Log
-from dasakl.nn import queue
-from tensorflow.python.framework import graph_util
-import os, argparse
+import os
 import h5py
-import dasakl.nn.framework as fmwk
-
-
-import threading
-from functools import wraps
 
 
 
