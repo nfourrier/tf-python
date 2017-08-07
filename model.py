@@ -83,7 +83,7 @@ class mmodel(object):
             param = layer
 
             if(N_layer==0):
-                param[3] = [self.inp]
+                param[3] = [self.inp_preprocess]
             else:
                 # print(param[-1])
                 param[3] = [self._layers['{}_{}'.format(param[3][idx][0],param[3][idx][1])] for idx in range(len(param[3]))]
@@ -110,7 +110,7 @@ class mmodel(object):
             
             self._variables[var.name] = var
 
-        return self.inp,self.out,self._variables
+        return self.inp,self.inp_preprocess,self.out,self.out_postprocess,self._variables
 
     @property
     def layers(self):
