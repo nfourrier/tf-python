@@ -10,6 +10,8 @@ class mmodel(object):
         self._layers = {}
         self._layers_list = []
         self._variables = {}
+        
+
 
     def __str__(self):
         return "Layers {0}\nVariables {1}".format(self.layers,self.variables)
@@ -40,18 +42,23 @@ class mmodel(object):
         '''
             Defines the input tensor given a list of dimension (dim)
         '''
+        dim = [x for x in dim if x != 0]
+        dim = [x if x > -1 else None for x in dim]
+        
         self.inp = tf.placeholder(tf.float32,[None]+dim,name='input')
         return self.inp
+
 
     def set_input_tensor(self,tensor):
         self.inp = tf.identity(tensor,name='input')
         return self.inp
-        
+
     def set_preprocess(self,fct):
         self.preprocess = fct
     def set_postprocess(self,fct):
         self.postprocess = fct
-    def get_model(self,layers):
+
+    def get_model(self,layers,meta):
         '''
             Generates and returns the model
             Before using this function the input tensor must exist (self.inp)
@@ -61,7 +68,7 @@ class mmodel(object):
                 - layers_list (list): contains the output tensors for each layer (easy to manipulate when the network is linear)
                 - variables (dictionary): keys are the variable name. The dictionary contains the variable tensor.
         '''
-
+        
         inp = [self.inp]
 
 
@@ -79,23 +86,29 @@ class mmodel(object):
         self._layers_list.append([self.inp_preprocess.name,self.inp_preprocess,'input_preprocess'])
         self._layers['input_preprocess'] = self.inp_preprocess
 
-        for layer in layers:
-            param = layer
 
+        
+        for layer in layers:
+            
+            param = layer
+            
             if(N_layer==0):
                 param[3] = [self.inp_preprocess]
             else:
-                # print(param[-1])
                 param[3] = [self._layers['{}_{}'.format(param[3][idx][0],param[3][idx][1])] for idx in range(len(param[3]))]
-            
             tf_layer = lay.create_layer(*param)
             self._layers['{}_{}'.format(param[0],param[1])] = tf_layer.out
             self._layers_list.append([tf_layer.out.name,tf_layer.out,'{}_{}'.format(param[0],param[1])])
             
+            
             N_layer += 1
+
+
+
         self.out = tf.identity(tf_layer.out,name='output')
         self._layers['output'] = self.out
         self._layers_list.append([self.out.name,self.out,'output'])
+
 
         if(not isinstance(self.postprocess,type(None))):
             tmp = self.postprocess(self.inp,self.out,meta)
@@ -105,11 +118,10 @@ class mmodel(object):
         self._layers['output_postprocess'] = self.out_postprocess
         self._layers_list.append([self.out_postprocess.name,self.out_postprocess,'output_postprocess'])
 
-        
         for var in tf.global_variables(): ### old version was tf.all_variables()
-            
             self._variables[var.name] = var
 
+    
         return self.inp,self.inp_preprocess,self.out,self.out_postprocess,self._variables
 
     @property
@@ -143,11 +155,19 @@ class mmodel(object):
         if(isinstance(layers,type(None))):
             layers = self._variables.keys() 
         
+
         for name in layers:
             gp,dat = name.split("/")
+            
+            # print(name,gp,dat,var_dict[name].get_shape(),f[gp][dat].shape)
+            # print(name,f[gp][dat].value.mean())
+            # print(name)
+            # print(f[gp][dat].value.mean())
+            # print(f[gp][dat].value)
+            # print(name,np.prod(f[gp][dat].value.shape),self._variables[name].get_shape(),self._variables[name],f[gp][dat].value.dtype)
+            # print(self._variables[name],type(self._variables[name]))
+
             session.run(self._variables[name].assign(f[gp][dat].value))
             
         f.close()
         print('\t ... weights loaded')
-
-
