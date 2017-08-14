@@ -20,6 +20,7 @@ class Layer(object):
         self.weights = None
         self.biases = None
         self.out = None
+        self.inp = None
         self.scope = '{}-{}'.format(self.number,self.type)
         try:
             self.setup(*args[3:]) # set attr up 
