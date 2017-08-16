@@ -307,6 +307,7 @@ class Detector(object):
         return processed
 
     def camera_detector(self, camera, wait=10):
+        from dasakl.utils import Printer
         preprocess_timer = Timer()
         network_timer = Timer()
         postprocess_timer = Timer()
@@ -344,8 +345,8 @@ class Detector(object):
 
             frame_timer.toc()
 
-            print('{0:04.4f} \t {1:04.4f} \t {2:04.4f} \t {3:04.4f} \t {4:04.4f} \t '.format(
-                    preprocess_timer.diff,network_timer.diff,postprocess_timer.diff,draw_timer.diff,frame_timer.diff))
+            Printer('count \t preprocess \t network \t postprocess \t total\n{1:5.0f} {0:04.4f} \t {1:04.4f} \t {2:04.4f} \t {3:04.4f} \t '.format(
+                    count, preprocess_timer.diff,network_timer.diff,postprocess_timer.diff,frame_timer.diff))
 
 
             if cv2.waitKey(1) & 0xFF == ord('q'):
