@@ -102,6 +102,47 @@ class Detector(object):
         if(session):
             self.load_session()
 
+    def formatted_variables(self):
+        var_list = sorted(list(self.var_dict))
+
+        # print(sorted(var))
+        layer_list = [var.split('/')[0] for var in var_list]
+
+        FORM = '{:>5} | {:<18} | {:<32} | {}'
+        FORM_ = '{}+{}+{}+{}'
+        LINE = FORM_.format('-'*6, '-'*20, '-'*34, '-'*20) 
+        HEADER = FORM.format(
+            'Index', 'Layer description', 'Variable name','Shape')
+        NEW_LINE = '\t{}\n'
+        idx = -1
+        msg = '\n'
+        msg += NEW_LINE.format('Variables summary')
+        msg += NEW_LINE.format('=================')
+        msg += NEW_LINE.format(HEADER)
+        msg += NEW_LINE.format(LINE)
+        for var in var_list:
+            new_idx = var.split('-')[0]
+            layer = var.split('-')[1].split('/')[0]
+            shp = self.var_dict[var].get_shape()
+
+            shp = ' x '.join(['{}'.format(x) for x in shp.dims])
+            if(new_idx==idx):
+                layer = ''
+                new_idx = ''
+
+            tmp = FORM.format(new_idx,layer,var,shp)
+
+            msg += NEW_LINE.format(tmp)
+            
+            
+            if(new_idx==''):
+                msg += NEW_LINE.format(LINE)
+            else:
+                idx = new_idx
+        msg += '\n'
+        return msg
+
+
     def load_weights(self,filename,layers=None):
         self.model.load_weights(self.sess,filename,layers)
     def load_session(self,filename=None):
