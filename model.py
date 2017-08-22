@@ -24,20 +24,6 @@ class mmodel(object):
         layers = get_layers(cfg_file)
         return layers
 
-    def get_input(self,dim0,dim1,dim2):
-        '''
-            Returns the tensor containing the input.
-            Note that the current configuration assumes a 2d rgb images
-            The input is a 4 dimensional tensor:
-                first dimension (None): corresponds to the batch
-                second dimension (dim0): corresponds to the width of the image
-                third dimension (dim1): corresponds to the height of the image
-                fourth dimension (dim2): corresponds to the channels of the image
-        '''
-        self.inp = tf.placeholder(tf.float32,[None, dim0, dim1, dim2])
-        return self.inp
-
-
     def set_input(self,dim):
         '''
             Defines the input tensor given a list of dimension (dim)
