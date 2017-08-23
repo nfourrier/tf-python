@@ -53,23 +53,39 @@ class mmodel(object):
                 - layers (dictionary): keys are defined by index_typeLayer. The dictionary contains the output tensor
                 - layers_list (list): contains the output tensors for each layer (easy to manipulate when the network is linear)
                 - variables (dictionary): keys are the variable name. The dictionary contains the variable tensor.
-        '''
-        
-        inp = [self.inp]
+        '''        
+        inp = self.inp
 
 
 
         N_layer = 0
 
-        self._layers_list.append([self.inp.name,self.inp,'input'])
-        self._layers['input'] = self.inp
-
+        inp_layer_list = []
+        inp_layers = []
+        for inp_idx in self.inp:
+            name_idx = inp_idx.name
+            inp_layer_list.append([name_idx,inp_idx,name_idx])
+            inp_layers.append(inp_idx)
+        self._layers_list.append(inp_layer_list)
+        self._layers['input'] = inp_layers
+        
         if(not isinstance(self.preprocess,type(None))):
             tmp = self.preprocess(self.inp,meta)
         else:
             tmp = self.inp
-        self.inp_preprocess = tf.identity(tmp,name='input_preprocess')
-        self._layers_list.append([self.inp_preprocess.name,self.inp_preprocess,'input_preprocess'])
+
+        if(not isinstance(tmp,type(['list']))):
+            tmp = [tmp]
+        
+        inp_pp_layer_list = []
+        self.inp_preprocess = []
+        for inp_idx in tmp:
+            # name_idx = 'input{}_preprocess'.format(idx)
+            name_idx = inp_idx.name
+            inp_pp_layer_list.append([name_idx,inp_idx,name_idx])
+            self.inp_preprocess.append(inp_idx)
+            # self.inp_preprocess = tf.identity(inp_idx,name=name_idx)
+        self._layers_list.append(inp_pp_layer_list)
         self._layers['input_preprocess'] = self.inp_preprocess
 
 
@@ -79,11 +95,13 @@ class mmodel(object):
             param = layer
             
             if(N_layer==0):
-                param[3] = [self.inp_preprocess]
+                param[3] = self.inp_preprocess
             else:
                 param[3] = [self._layers['{}_{}'.format(param[3][idx][0],param[3][idx][1])] for idx in range(len(param[3]))]
             tf_layer = lay.create_layer(*param)
             self._layers['{}_{}'.format(param[0],param[1])] = tf_layer.out
+            # print(tf_layer.out)
+            # exit()
             self._layers_list.append([tf_layer.out.name,tf_layer.out,'{}_{}'.format(param[0],param[1])])
             
             
@@ -94,7 +112,6 @@ class mmodel(object):
         self.out = tf.identity(tf_layer.out,name='output')
         self._layers['output'] = self.out
         self._layers_list.append([self.out.name,self.out,'output'])
-
 
         if(not isinstance(self.postprocess,type(None))):
             tmp = self.postprocess(self.inp,self.out,meta)
