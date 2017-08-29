@@ -376,13 +376,19 @@ class Detector(object):
             draw_timer.tic()
             # processed = self.draw_result(frame,processed)
             draw_timer.toc()
-            if(isinstance(processed,type([1,2,3]))):
-                count = 0
-                for im in processed:
-                    count += 1
-                    cv2.imshow('output {}'.format(count), im[0,:,:,:])    
-            else:            
-                cv2.imshow('Camera', processed[0,:,:,:])
+            
+            inp = np.expand_dims(frame,axis=0)
+            # print(processed.shape)
+            if(not isinstance(processed,type([1,2,3]))):
+                processed = [processed]
+            if(show_input):
+                processed = [inp] + [processed]
+                # processed = [processed]
+
+            ## Process post-processed output to display a single frame
+            # print([x.shape for x in processed])
+            processed = viz.to_single_frame(processed)
+
 
             frame_timer.toc()
 
