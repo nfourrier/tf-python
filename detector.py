@@ -142,6 +142,52 @@ class Detector(object):
         msg += '\n'
         return msg
 
+    def formatted_model(self):
+        var_list = sorted(list(self.var_dict))
+
+        FORM = '{:>5} | {:<18} | {:<18} | {:<32} | {}'
+        FORM_ = '{}+{}+{}+{}+{}'
+        LINE = FORM_.format('-'*6, '-'*20, '-'*20, '-'*34, '-'*20) 
+        HEADER = FORM.format(
+            'Index', 'Layer description', 'Output Size','Variable','Shape')
+        NEW_LINE = '  {}\n'
+        idx = -1
+        msg = '\n'
+        msg += NEW_LINE.format('Model summary')
+        msg += NEW_LINE.format('=============')
+        msg += NEW_LINE.format(HEADER)
+        msg += NEW_LINE.format(LINE)
+
+        for lay in self.layers:
+            idx = lay[1]
+            layer_type = lay[0]
+            # layer_type = lay[0].split("_")[0]
+            layer_name = '{}-{}'.format(lay[1],lay[0])
+            layer_name = '{}-{}'.format(lay[1],lay[0].split('_')[0])
+            output_size = ' x '.join(['{}'.format(x) for x in lay[2]])
+            var = [x for x in var_list if layer_name==x.split('/')[0]]
+            if(len(var)>0):
+                [var_list.remove(x) for x in var]
+                
+                shp_list = [self.var_dict[v].get_shape() for v in var]
+                shp_list = [' x '.join(['{}'.format(x) for x in y]) for y in shp_list]
+            else:
+                var = ['']
+                shp_list = ['']
+            tmp = FORM.format(idx,layer_type,output_size,var[0],shp_list[0])
+            msg += NEW_LINE.format(tmp)
+            for jdx in range(1,len(var)):
+                tmp = FORM.format('','','',var[jdx],shp_list[jdx])
+                msg += NEW_LINE.format(tmp)
+            msg += NEW_LINE.format(LINE)
+
+            # print(idx,layer_type,output_size,var)
+
+
+        if(len(var_list)>0):
+
+            print("\n\t Warning:\n\tThe following variables are not associated with a layer\n")
+        return msg
 
     def load_weights(self,filename,layers=None):
         self.model.load_weights(self.sess,filename,layers)
@@ -376,7 +422,7 @@ class Detector(object):
             draw_timer.tic()
             # processed = self.draw_result(frame,processed)
             draw_timer.toc()
-            
+
             inp = np.expand_dims(frame,axis=0)
             # print(processed.shape)
             if(not isinstance(processed,type([1,2,3]))):
