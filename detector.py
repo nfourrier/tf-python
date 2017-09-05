@@ -9,7 +9,8 @@ import pandas as pd
 import layer as lay
 from model import mmodel,generic_model,optimizer
 from parser import get_layers
-from dasakl.utils import Timer, DataSet, Log
+from framework import create_framework
+from utils import Timer, DataSet, Log
 import os
 import h5py
 
@@ -17,18 +18,49 @@ import h5py
 
 class Detector(object):
     def __init__(self, cfg=None, weights=None, framework=None, training_parameters=None, GPU=True):
-        # tf.reset_default_graph()
-        if(not isinstance(framework,type(None))):
-            if(isinstance(framework,type('string'))):
-                framework = fmwk.create_framework(framework)
-
         ## Fectch cfg file from framework definition
         if(isinstance(cfg,type(None))):
             try: 
                 cfg = framework['cfg']
             except Exception as e:
                 exit("\t Please specify a cfg file.")
+        self.gpu = GPU
+        self.cfg = cfg
+        self.weights = weights
+        self.training = False
 
+        ## Parse cfg file and initialize the model
+        self.name = os.path.basename(cfg).split('.')[0]
+        self.weights_path = os.path.join(dasakl.DATA_FOLDER,'weights')
+        self.session_path = os.path.join(dasakl.DATA_FOLDER,'session',self.name)
+
+        self.model = mmodel()
+        self.meta,self.layers,self.archi = self.model.parse(cfg)
+        self.from_graph = False
+        
+        ### GPU CONFIG
+        if(self.gpu):
+            self.tf_config = tf.ConfigProto(
+                log_device_placement=False,gpu_options=(tf.GPUOptions(per_process_gpu_memory_fraction=0.80,allow_growth = True))
+                        )
+        else:
+            self.tf_config = tf.ConfigProto(
+                log_device_placement=False,device_count = {'GPU': 0})
+
+        
+        ### FRAMEWORK
+        if(not isinstance(framework,type(None))):
+            if(isinstance(framework,type('string'))):
+                framework = create_framework(framework)
+
+        if(not isinstance(framework,type(None))):
+            ### Framework contains preprocessing/postprocessing functions
+            self.load_framework(framework)  
+        else:
+            ### Need to initialize TF preprocess/postprocess functions to generate the graph
+            self.set_TFpreprocess(None)
+            self.set_TFpostprocess(None)
+    
         ## Fetch weights from framework definition
         if(isinstance(weights,type(None))):
             try:
@@ -36,58 +68,33 @@ class Detector(object):
             except Exception as e:
                 print("\t No weights in the initialization")
 
-        self.cfg = cfg
-        self.weights = weights
-        self.gpu = GPU
-        ## Parse cfg file and initialize the model
-        self.name = os.path.basename(cfg).split('.')[0]
-        
-        self.model = mmodel()
-        self.meta,self.layers,self.archi = self.model.parse(cfg)
-        # print(self.archi)
-
-    # def initialisation(self):
-        self.training = False
-
-        if(not isinstance(framework,type(None))):
-            self.load_framework(framework)  
-
         if(isinstance(training_parameters,type(None))):
-            self.model.set_input(self.meta['inp_size'])
+            self.model.set_input(self.meta['input_dimension'])
         elif(len(training_parameters)>2):
-            self.model.set_input(self.meta['inp_size'])
+            self.model.set_input(self.meta['input_dimension'])
             self.training=True
         else:
             self.advanced_training_init(training_parameters[0],training_parameters[1])
             self.model.set_input_tensor(self.x)
             self.training = True
-
-        ## Load the model from the cfg file
-        self.x,self.y,self.var_dict = self.model.get_model(self.layers)
         
+        ## Load the model from the cfg file
+        self.model.set_preprocess(self.TFpreprocess)
+        self.model.set_postprocess(self.TFpostprocess)
+
+
+        ## Generate the graph and return:
+        ##      - input after TF preprocessing
+        ##      - output before postprocessing (2017-07: only support one output)
+        ##      - output after postprocessing
+        self.x,self.x_preprocess,self.y,self.y_postprocess,self.var_dict = self.model.get_model(self.layers,self.meta)
 
         formatted_variables = self.formatted_variables()
-        # print(formatted_variables)  
         self.model_text = self.formatted_model()
         print(self.model_text)
-        
 
 
-        # print(tf.global_variables(),len(tf.global_variables()))
-        # saver = tf.train.Saver()
-        # print(tf.global_variables(),len(tf.global_variables()))
-        # exit()
-        # for lay in list(self.model.layers.keys()):
-        #     print(lay,self.model.layers[lay].shape)
-        # exit()
-        if(self.gpu):
-            tf_config = tf.ConfigProto(
-                log_device_placement=False,gpu_options=(tf.GPUOptions(per_process_gpu_memory_fraction=0.80,allow_growth = True))
-                        )
-        else:
-            tf_config = tf.ConfigProto(
-                log_device_placement=False,device_count = {'GPU': 0})
-
+    
         self.sess = tf.Session(config=self.tf_config)
         self.sess.run(tf.global_variables_initializer())
         
