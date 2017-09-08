@@ -1,12 +1,7 @@
 import tensorflow as tf
 import numpy as np
 import cv2
-from collections import defaultdict
-from copy import deepcopy
-import json 
-import math 
 import pandas as pd
-import layer as lay
 from model import mmodel,generic_model,optimizer
 from parser import get_layers
 from framework import create_framework
@@ -198,30 +193,9 @@ class Detector(object):
 
     def load_weights(self,filename,layers=None):
         self.model.load_weights(self.sess,filename,layers)
-    def load_session(self,filename=None):
-
-        # lay = 'Adagrad/update_6-fullyconnected/kernel/ApplyAdagrad'
-        print(len([n.name  for n in tf.get_default_graph().as_graph_def().node]))
-        print([x.name for x in tf.global_variables()])
-        A = self.sess.run('3-convolutional/kernel/Adagrad:0',feed_dict={self.x:self.preprocess('/home/gpu/data/shopkins/img80/000040003.png',self.meta)})
-        B = self.sess.run('2-convolutional/kernel:0',feed_dict={self.x:self.preprocess('/home/gpu/data/shopkins/img80/000040003.png',self.meta)})
-        print(A.shape,A.mean())
-        print(B.shape,B.mean())
-
-        import time
-        filename = os.path.join(self.session_path,'checkpoint')
-        print('Load session from {} \n \t last modified: {} \n \t ...'.format(filename,time.ctime(os.path.getmtime(filename))))
-        self.saver.restore(self.sess, 
-            tf.train.latest_checkpoint(self.session_path))
-        print('\t ... session loaded')
-        print(len([n.name  for n in tf.get_default_graph().as_graph_def().node]))
-        print([x.name for x in tf.global_variables()])
-        A = self.sess.run('3-convolutional/kernel/Adagrad:0',feed_dict={self.x:self.preprocess('/home/gpu/data/shopkins/img80/000040003.png',self.meta)})
-        B = self.sess.run('2-convolutional/kernel:0',feed_dict={self.x:self.preprocess('/home/gpu/data/shopkins/img80/000040003.png',self.meta)})
-        print(A.shape,A.mean())
-        print(B.shape,B.mean())
-
+ 
     def save_graph(self,filename,freeze=True,output_nodes=None):
+        from tensorflow.python.framework import graph_util
         def _freeze_graph(model_folder,model_name,output_nodes):
             # We retrieve our checkpoint fullpath
             checkpoint = tf.train.get_checkpoint_state(model_folder,latest_filename='checkpoint')
