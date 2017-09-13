@@ -80,12 +80,10 @@ class mmodel(object):
         inp_pp_layer_list = []
         self.inp_preprocess = []
         for inp_idx in tmp:
-            # name_idx = 'input{}_preprocess'.format(idx)
             name_idx = inp_idx.name
             inp_pp_layer_list.append([name_idx,inp_idx,name_idx])
             self.inp_preprocess.append(inp_idx)
-            # self.inp_preprocess = tf.identity(inp_idx,name=name_idx)
-        self._layers_list.append(inp_pp_layer_list)
+            self._layers_list.append(inp_pp_layer_list)
         self._layers['input_preprocess'] = self.inp_preprocess
 
 
@@ -100,8 +98,6 @@ class mmodel(object):
                 param[3] = [self._layers['{}_{}'.format(param[3][idx][0],param[3][idx][1])] for idx in range(len(param[3]))]
             tf_layer = lay.create_layer(*param)
             self._layers['{}_{}'.format(param[0],param[1])] = tf_layer.out
-            # print(tf_layer.out)
-            # exit()
             self._layers_list.append([tf_layer.out.name,tf_layer.out,'{}_{}'.format(param[0],param[1])])
             
             
