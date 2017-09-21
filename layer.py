@@ -55,7 +55,6 @@ class maxpool_layer(Layer):
             inp: tensorflow
                 tensorflow object on which the operation is going 
         '''
-        # self.scope = str(idx)+'-maxpool'
         if(scope!=''):
             self.scope=scope
         self.inp = inp[0]
@@ -70,7 +69,6 @@ class maxpool_layer(Layer):
 
 class avgpool_layer(Layer):
     def setup(self, inp, size, stride,pad=0,padding='SAME',scope=''):
-        # self.scope = str(idx)+'-maxpool'
         if(scope!=''):
             self.scope=scope
         self.inp = inp[0]
@@ -159,7 +157,6 @@ class deconvolutional_layer_same(Layer):
                                         strides=[1] + [stride] * 2 + [1], 
                                         padding='SAME') ## SAME
         out = tf.nn.bias_add(deconv, self.biases)
-        # print(self.out)
 
         if(add_layers):
             out = tf.add(out,target_layer)
@@ -272,11 +269,11 @@ class convolutional_layer(Layer):
                          tf.constant(0.1, shape=[out_size]),
                          trainable=trainable,
                          name=self.scope+'/biases')
-        # print(tf.trainable_variables())
+
         padder = [[padding, padding]] * 2
-        # print(self.scope,'inp',inp[0].get_shape())
+
         temp = tf.pad(self.inp, [[0, 0]] + padder + [[0, 0]])
-        # print(self.scope,'pad-{}'.format(padding),temp.get_shape())
+
         
         temp = tf.nn.conv2d(temp, self.weights, padding = 'VALID', name = self.scope, strides = [1] + [stride] * 2 + [1])
 
@@ -382,7 +379,7 @@ class convolutional_1d_layer(Layer):
         '''
         # self.scope = str(self.number)+'-convolutional'
 
-                if(scope!=''):
+        if(scope!=''):
             self.scope=scope
         
         self.inp = inp[0]
@@ -433,8 +430,6 @@ class convolutional_1d_layer(Layer):
             'is_training': False
             })
         v = tf.__version__.split('.')[1]
-        # if int(v) < 12: key = 'initializers'
-        # else: key = 'param_initializers'
         key = 'param_initializers'
         w = {}
         w['moving_mean'] = moving_mean
@@ -462,24 +457,16 @@ class res_block(Layer):
         out = 0
         # print('res',inp)
         for r in dilation:
-            print(inp)
             conv_filter = self.single_aconv1d(inp, size=7, dilation=r, activation='tanh',scope=self.scope + '_aconv_{}_{}'.format('filter',r))
-            # print(conv_filter)
-            # exit()
             conv_gate = self.single_aconv1d(inp, size=7, dilation=r, activation='sigmoid',scope=self.scope + '_aconv_{}_{}'.format('gate',r))
-            # print(conv_gate)
             res = conv_filter * conv_gate
-            # print(res)
             res =  self.single_conv1d(res, size=1, activation='tanh',scope=self.scope + '_conv_{}_{}'.format('out',r))
-            # exit()
             out += res
 
             inp = inp + res
 
         self.out = out
-        # exit()
-        print(self.out)
-        # exit()
+
         return self.out
 
     def single_aconv1d(self,inp, size, dilation, activation, scope):
@@ -531,10 +518,6 @@ class causal_convolutional_1d(Layer):
                          # tf.truncated_normal([1, kernel_size, int(in_size), out_size],stddev=0.1), ######### 1d case treated as 2d
                          trainable=trainable,
                          name=self.scope+'/kernel')
-        # self.biases = tf.Variable(
-        #                  tf.constant(0.1, shape=[out_size]),
-        #                  trainable=trainable,
-        #                  name=self.scope+'/biases')
 
         
         
@@ -807,6 +790,9 @@ def create_layer(ltype, num, *args):
     
 
 def main():
+    '''
+    TO DO: Implement calls for unit testing
+    '''
     print('Not implemented')
 
 if __name__ == '__main__':
