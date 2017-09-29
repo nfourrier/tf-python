@@ -73,3 +73,42 @@ def _parser(model):
     meta['inp_size'] = input_list[0][2]
     
     return layers, meta, input_list
+
+
+def get_layers(model):
+    """
+    return a list of `layers` objects 
+    """
+    args = [model]
+    cfg_layers = _cfg_yielder(*args)
+    meta = dict(); layers = list()
+    NEW_LINE = '\t{}\n'
+    msg = '\n'
+    msg += NEW_LINE.format('Model summary')
+    msg += NEW_LINE.format('=============')
+    msg += NEW_LINE.format(HEADER)
+    msg += NEW_LINE.format(LINE)
+    for i, info in enumerate(cfg_layers):       
+        ### Recieved meta
+        if i == 0: 
+            meta = info
+            # tmp = FORM.format('','input',' x '.join(['{:>4}'.format(x) for x in meta['inp_size']]),'')    
+            # msg += NEW_LINE.format(tmp)
+            # msg += NEW_LINE.format(LINE)
+            continue
+        ### Recieved input_list
+        if i == 1:
+            input_list = info
+            for inp in input_list:
+                tmp = FORM.format('',inp[0],' x '.join(['{:>4}'.format(x) for x in inp[2]]),'')    
+                msg += NEW_LINE.format(tmp)
+            msg += NEW_LINE.format(LINE)
+            continue
+
+        tmp = FORM.format(info[1],info[0],' x '.join(['{:>4}'.format(x) for x in info[2]]),', '.join(['{}'.format(x[1]) for x in info[3]]))
+        # else: new = create_darkop(*info)
+        msg += NEW_LINE.format(tmp)
+        msg += NEW_LINE.format(LINE)
+        layers.append(deepcopy(info))
+
+    return meta, input_list, layers, msg    
