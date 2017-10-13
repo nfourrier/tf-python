@@ -24,16 +24,84 @@ class mmodel(object):
         layers = get_layers(cfg_file)
         return layers
 
-    def set_input(self,dim):
+    def build_inputs(self,input_list):
         '''
-            Defines the input tensor given a list of dimension (dim)
+        Build placeholder defining the inputs of the model. 
+        Main input is assumed to be the first element of the list
+        Inputs can be the image feed but also additional parameters such as hyperparamters (learning rate)
+        input_list contains a list of inputs of the following form:
+            ['name','type',[dim1,dim2,...,dimN]]
         '''
-        dim = [x for x in dim if x != 0]
-        dim = [x if x > -1 else None for x in dim]
-        
-        self.inp = tf.placeholder(tf.float32,[None]+dim,name='input')
-        return self.inp
+        FORM = '{:>5} | {:<18} | {:<28} | {}'
+        FORM_ = '{}+{}+{}+{}'
+        LINE = FORM_.format('-'*6, '-'*20, '-'*30, '-'*20) 
+        HEADER = FORM.format(
+            'Index', 'Name', 'Dimension','Type')
+        NEW_LINE = '\t{}\n'
 
+
+        msg = '\n'
+        msg += NEW_LINE.format('Input summary')
+        msg += NEW_LINE.format('=============')
+        msg += NEW_LINE.format(HEADER)
+        msg += NEW_LINE.format(LINE)
+
+
+        self.inp = []
+        idx = 0
+        for x in input_list:
+            x_name = x[0]
+            x_type = x[1].lower()
+            x_dim = x[2]
+            x_dim = [y for y in x_dim if y != 0]
+            x_dim = [y if y > -1 else None for y in x_dim]
+            x_dim = [None]+x_dim
+            x_summary = x[3]
+            if(isinstance(x_summary,type('string'))):
+                if("false"==x_summary.lower()):
+                    x_summary = False
+                else: 
+                    x_summary = True
+            elif(isinstance(x_summary,type(int(3)))):
+                if(x_summary>0):
+                    x_summary = True
+                else:
+                    x_summary = False
+
+            if("float" in x_type):
+                if("float64"==x_type):
+                    tf_type = tf.float64
+                else:
+                    tf_type = tf.float32
+            elif("string" in x_type):
+                tf_type = tf.string
+            elif("int" in x_type):
+                if("int64"==x_type):
+                    tf_type = tf.int64
+                elif("uint8"==x_type):
+                    tf_type = tf.uint8
+                else:
+                    tf_type = tf.int32
+            else:
+                print("INPUT BUILD ERROR\n\t{}\n\tPlease specify a different type. {} is not in list [float,string,int]".format(x,x_type))
+                exit()
+            # self.inp.append(tf.placeholder(tf_type,[None]+x_dim,name='input_{}'.format(idx)))
+            tf_x = tf.placeholder(tf_type,x_dim,name=x_name)
+            if(x_summary):
+                summary = tf.summary.tensor_summary("Input", tf_x, max_outputs=1)
+            self.inp.append(tf_x)
+            # self._layers_list.append([tf_x.name,tf_x,x_name])
+            # self._layers[x_name] = tf_x
+            self._inputs[x_name] = tf_x
+            self._inputs_list.append([tf_x.name,tf_x,x_name])
+            self._tensors[x_name] = tf_x
+            self._tensors_list.append([tf_x.name,tf_x,x_name])            
+            tmp = FORM.format(idx,tf_x.name,' x '.join(['{:>4}'.format(x) if(isinstance(x,type(1))) else '{}'.format(x) for x in tf_x.get_shape().as_list()]),tf_x.dtype)
+            msg += NEW_LINE.format(tmp)
+            idx = idx + 1
+        msg += NEW_LINE.format(LINE)
+        self.input_text = msg
+        return self.inp
 
     def set_input_tensor(self,tensor):
         self.inp = tf.identity(tensor,name='input')
