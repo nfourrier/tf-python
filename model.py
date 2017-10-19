@@ -122,74 +122,86 @@ class mmodel(object):
                 - layers_list (list): contains the output tensors for each layer (easy to manipulate when the network is linear)
                 - variables (dictionary): keys are the variable name. The dictionary contains the variable tensor.
         '''        
-        inp = self.inp
+        inp = self.build_inputs(input_list)
+        
 
 
 
         N_layer = 0
 
-        inp_layer_list = []
-        inp_layers = []
-        for inp_idx in self.inp:
-            name_idx = inp_idx.name
-            inp_layer_list.append([name_idx,inp_idx,name_idx])
-            inp_layers.append(inp_idx)
-        self._layers_list.append(inp_layer_list)
-        self._layers['input'] = inp_layers
-        
-        if(not isinstance(self.preprocess,type(None))):
-            tmp = self.preprocess(self.inp,meta)
-        else:
-            tmp = self.inp
-
-        if(not isinstance(tmp,type(['list']))):
-            tmp = [tmp]
-        
-        inp_pp_layer_list = []
-        self.inp_preprocess = []
-        for inp_idx in tmp:
-            name_idx = inp_idx.name
-            inp_pp_layer_list.append([name_idx,inp_idx,name_idx])
-            self.inp_preprocess.append(inp_idx)
-            self._layers_list.append(inp_pp_layer_list)
-        self._layers['input_preprocess'] = self.inp_preprocess
-
-
-        
         for layer in layers:
             
             param = layer
             
-            if(N_layer==0):
-                param[3] = self.inp_preprocess
-            else:
-                param[3] = [self._layers['{}_{}'.format(param[3][idx][0],param[3][idx][1])] for idx in range(len(param[3]))]
-            tf_layer = lay.create_layer(*param)
-            self._layers['{}_{}'.format(param[0],param[1])] = tf_layer.out
-            self._layers_list.append([tf_layer.out.name,tf_layer.out,'{}_{}'.format(param[0],param[1])])
+            # if(N_layer==0):
+            #     param[3] = self.inp_preprocess
+            # else:
             
+            param[6] = [self._tensors['{}_{}'.format(param[6][idx][0],param[6][idx][1])] if param[6][idx][1] > -1 else self._tensors[param[6][idx][0]] for idx in range(len(param[6]))]
+            # print(param[6])
+            # exit()
+            
+            # print(param[0])
+            if(param[0].lower() in ['preprocess','custom']):
+                # tf_layer = self.custom_layers[param[4]](param[3],meta,scope=SCOPE_FORMAT.format(param[1],param[0]))
+                # self._layers['{}_{}'.format(param[0],param[1])] = tf_layer
+                # self._layers_list.append([tf_layer.name,tf_layer,'{}_{}'.format(param[0],param[1])])
+                param[7] = self.custom_layers[param[7]]
+                param = param + [meta]
+                tf_layer = create_custom(*param)()
+            elif(param[0].lower() in ['loss']):
+                # tf_layer = create_loss()
+
+                param[7] = self.loss_layers[param[7]]
+                param = param + [meta]
+                tf_layer = create_custom(*param)()
+            elif(param[0].lower() in ['optimizer']):
+                # print(param)
+                # # exit()
+                if(isinstance(param[8],type('string'))):
+                    param[8] = self._tensors[param[8]][0,0,0,0]
+
+                # #param
+                # #['Optimizer', 7, [784, 0, 0], [<tf.Tensor 'layer006_Loss_out:0' shape=() dtype=float32>], 'RMSProp', 'lr', 'train_operation']
+                # print(param)
+                # tf_loss = param[6][0]
+                # #optimizer = create_optimizer(param[4])(lr[0,0])
+                # optimizer = create_optimizer(param[7])(lr[0,0,0,0])
+                # gradients = optimizer.compute_gradients(tf_loss)
+                # #### Add  clip gradients
+                # train_op = optimizer.apply_gradients(gradients,name=param[9])
+                # tf_layer = None
+                tf_layer = create_optimizer(*param)()
+
+
+
+            else:
+                tf_layer = create_layer(*param)()
+                last_layer = tf_layer
+                self._weights['{}_{}'.format(param[0],param[1])] = tf_layer.weights
+                self._weights_list = self._weights_list + tf_layer.weights
+                for W in tf_layer.weights:
+                    self._variables[W.name.split(':')[0]] = W
+
+            if(isinstance(tf_layer,type(None))):
+                self._tensors['{}_{}'.format(param[0],param[1])] = tf_layer
+                self._tensors_list.append([tf_layer.out.name,tf_layer,'{}_{}'.format(param[0],param[1])])            
+                self._layers_list.append([tf_layer.out.name,tf_layer,'{}_{}'.format(param[0],param[1])])
+            else:
+                self._layers['{}_{}'.format(param[0],param[1])] = tf_layer
+                self._layers_list.append([tf_layer.out.name,tf_layer,'{}_{}'.format(param[0],param[1])])
+                self._tensors['{}_{}'.format(param[0],param[1])] = tf_layer.out
+                self._tensors_list.append([tf_layer.out.name,tf_layer,'{}_{}'.format(param[0],param[1])])            
             
             N_layer += 1
 
 
 
-        self.out = tf.identity(tf_layer.out,name='output')
-        self._layers['output'] = self.out
-        self._layers_list.append([self.out.name,self.out,'output'])
-
-        if(not isinstance(self.postprocess,type(None))):
-            tmp = self.postprocess(self.inp,self.out,meta)
-        else:
-            tmp = self.out
-        self.out_postprocess = tf.identity(tmp,name='output_postprocess')
-        self._layers['output_postprocess'] = self.out_postprocess
-        self._layers_list.append([self.out_postprocess.name,self.out_postprocess,'output_postprocess'])
-
-        for var in tf.global_variables(): ### old version was tf.all_variables()
-            self._variables[var.name] = var
+        self.out = tf.identity(last_layer.out,name='output')
+        self._tensors['output'] = self.out
 
     
-        return self.inp,self.inp_preprocess,self.out,self.out_postprocess,self._variables
+        return self.inp,self.out,self._variables
 
     @property
     def layers(self):
