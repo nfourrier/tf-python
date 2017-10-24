@@ -202,7 +202,19 @@ class mmodel(object):
 
     
         return self.inp,self.out,self._variables
+    @property
+    def all_weights(self):
+        tensor_by_name = {}
+        for x in self._layers_list:
+            tensor_by_name = {**tensor_by_name,**x[1].all_weights}
+        return tensor_by_name
 
+    @property
+    def all_layers(self):
+        layers = {}
+        for x in self._layers_list:
+            layers[x[1].name] = x[1]
+        return layers
     @property
     def layers(self):
         '''
