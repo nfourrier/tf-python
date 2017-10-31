@@ -9,7 +9,16 @@ class mmodel(object):
         self.name = 'default'
         self._layers = {}
         self._layers_list = []
+        self._tensors = {}
+        self._tensors_list = []
         self._variables = {}
+        self._inputs_list = []
+        self._inputs = {}
+        self._weights_list = []
+        self._weights = {}
+
+        self._optimizers = {}
+        self._losses = {}
         
 
 
@@ -155,6 +164,7 @@ class mmodel(object):
                 param[7] = self.loss_layers[param[7]]
                 param = param + [meta]
                 tf_layer = create_custom(*param)()
+                self._losses[tf_layer.out.name] = tf_layer.out
             elif(param[0].lower() in ['optimizer']):
                 # print(param)
                 # # exit()
@@ -172,6 +182,7 @@ class mmodel(object):
                 # train_op = optimizer.apply_gradients(gradients,name=param[9])
                 # tf_layer = None
                 tf_layer = create_optimizer(*param)()
+                self._optimizers[tf_layer.name] = tf_layer.out
 
 
 
@@ -199,9 +210,8 @@ class mmodel(object):
 
         self.out = tf.identity(last_layer.out,name='output')
         self._tensors['output'] = self.out
-
-    
         return self.inp,self.out,self._variables
+
     @property
     def all_weights(self):
         tensor_by_name = {}
@@ -215,6 +225,15 @@ class mmodel(object):
         for x in self._layers_list:
             layers[x[1].name] = x[1]
         return layers
+    @property
+    def all_losses(self):
+        
+        return self._losses
+
+    @property
+    def all_optimizers(self):
+        
+        return self._optimizers
     @property
     def layers(self):
         '''
