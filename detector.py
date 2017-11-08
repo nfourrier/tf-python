@@ -14,35 +14,55 @@ import h5py
 class Detector(object):
     def __init__(self, cfg=None, weights=None, framework=None, training_parameters=None, GPU=True):
         ## Fectch cfg file from framework definition
+        if(isinstance(GPU,type(1))):
+            self.gpu_allocation = GPU
+            if(GPU>0):
+                self.gpu = True
+            else:
+                self.gpu = False
+        else:
+            if(GPU):
+                self.gpu_allocation = 0.8
+                self.gpu = True
+            else:
+                self.gpu_allocation = 0
+                self.gpu = False
+
+        if(self.gpu):
+            self.tf_config = tf.ConfigProto(
+                log_device_placement=False,
+                gpu_options=(tf.GPUOptions(
+                        per_process_gpu_memory_fraction=self.gpu_allocation,
+                        # allow_soft_placement=True,
+                        allow_growth = True)
+                )
+            )
+        else:
+            self.tf_config = tf.ConfigProto(
+                log_device_placement=False,
+                # allow_soft_placement=True,
+                device_count = {'GPU': 0}
+            )
         if(isinstance(cfg,type(None))):
             try: 
                 cfg = framework['cfg']
             except Exception as e:
                 exit("\t Please specify a cfg file.")
-        self.gpu = GPU
         self.cfg = cfg
         self.weights = weights
+        self.custom_functions_list = custom
         self.training = False
-
+        # print(10)
         ## Parse cfg file and initialize the model
         self.name = os.path.basename(cfg).split('.')[0]
-        self.weights_path = os.path.join(dasakl.DATA_FOLDER,'weights')
-        self.session_path = os.path.join(dasakl.DATA_FOLDER,'session',self.name)
-
+        self.weights_path = os.path.join(DATA_FOLDER,'weights')
+        self.graph_path = os.path.join(DATA_FOLDER,'session',self.name)
+        # self.weights_path(os.path.join(dasakl.DATA_FOLDER,'weights'))
+        # self.graph_path(os.path.join(dasakl.DATA_FOLDER,'session',self.name))
         self.model = mmodel()
-        self.meta,self.layers,self.archi = self.model.parse(cfg)
-        self.from_graph = False
-        
-        ### GPU CONFIG
-        if(self.gpu):
-            self.tf_config = tf.ConfigProto(
-                log_device_placement=False,gpu_options=(tf.GPUOptions(per_process_gpu_memory_fraction=0.80,allow_growth = True))
-                        )
-        else:
-            self.tf_config = tf.ConfigProto(
-                log_device_placement=False,device_count = {'GPU': 0})
+        self.meta,self.input_list,self.layers,self.parser_summary = self.model.parse(cfg)
 
-        
+        self.from_graph = False
         ### FRAMEWORK
         if(not isinstance(framework,type(None))):
             if(isinstance(framework,type('string'))):
@@ -73,21 +93,15 @@ class Detector(object):
             self.model.set_input_tensor(self.x)
             self.training = True
         
-        ## Load the model from the cfg file
-        self.model.set_preprocess(self.TFpreprocess)
-        self.model.set_postprocess(self.TFpostprocess)
-
-
-        ## Generate the graph and return:
-        ##      - input after TF preprocessing
-        ##      - output before postprocessing (2017-07: only support one output)
-        ##      - output after postprocessing
-        self.x,self.x_preprocess,self.y,self.y_postprocess,self.var_dict = self.model.get_model(self.layers,self.meta)
-
+        self.model.set_custom(self.custom_functions_list)
+        self.x,self.y,self.var_dict = self.model.get_model(self.input_list,self.layers,self.meta)
+        self.set_summary()
+        self.cwd = os.getcwd()
+        self.meta_graph_path = os.path.join(self.cwd,os.path.basename(self.cfg).split(".")[0]+'.meta')
+        
+        meta_graph_def = tf.train.export_meta_graph(filename=self.meta_graph_path)
         formatted_variables = self.formatted_variables()
         self.model_text = self.formatted_model()
-        print(self.model_text)
-
 
     
         self.sess = tf.Session(config=self.tf_config)
