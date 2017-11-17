@@ -281,3 +281,19 @@ class mmodel(object):
             
         f.close()
         print('\t ... weights loaded')
+        
+    def full_description(self):
+        NEW_LAYER = '+++++++++++++++++++++++++++++++++++++++++++++++\n'
+        msg = "Model Description\n"
+        msg += NEW_LAYER
+        msg += '\t\n'
+        msg += 'INPUTS\n'
+        for inp in self._inputs_list:
+            msg += '\t{}\n'.format(inp[1])
+        msg += NEW_LAYER
+        for layer in self._layers_list:
+            msg += layer[1].description
+            msg += NEW_LAYER
+        return msg
+    def __str__(self):
+        return self.full_description()
