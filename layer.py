@@ -2,6 +2,13 @@ import numpy as np
 import tensorflow as tf
 import tensorflow.contrib.slim as slim
 
+FORM = '{:>6} | {:>6} | {:<32} | {}'
+HEADER = FORM.format(
+    'Source', 'Train?','Layer description', 'Output size')
+SCOPE_FORMAT = '{0}/{1:0>3d}_{2}'
+LAYER_NAME_FORMAT = '{0}_{1}'
+LAYER_OUTPUT_NAME = 'out'
+
 class Layer(object):
     '''
     Abstract parent class for all layers.
@@ -13,21 +20,30 @@ class Layer(object):
                 return self.out
     '''
     def __init__(self,*args):
+        self._args = args
         self._params = list(args)
         self.type = list(args)[0]
         self.number = list(args)[1]
         self.dim = list(args)[2]
-        self.weights = None
+        self.prefix = list(args)[3]
+        self.prefix_number = list(args)[4]
+        self.weights = []
         self.biases = None
-        self.out = None
-        self.inp = None
-        self.scope = '{}-{}'.format(self.number,self.type)
-        try:
-            self.setup(*args[3:]) # set attr up 
-        except Exception as e:
-            print('\t Error in layer {} with type {} \n\t Input parameters: {}'.format(self.number,self.type,*args[2:]))
-            print(e)
-            raise
+        self.scope = SCOPE_FORMAT.format(self.prefix,self.prefix_number,self.type)
+        self.name = SCOPE_FORMAT.format(self.prefix,self.prefix_number,self.type)
+        x_summary = list(args)[5]
+        if(isinstance(x_summary,type('string'))):
+            if("false"==x_summary.lower()):
+                x_summary = False
+            else: 
+                x_summary = True
+        elif(isinstance(x_summary,type(int(5)))):
+            if(x_summary>0):
+                x_summary = True
+            else:
+                x_summary = False
+        self.do_summary = x_summary
+        self.summary = None
     def setup(self, *args): pass
     
     def __str__(self):
