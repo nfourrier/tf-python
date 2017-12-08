@@ -49,7 +49,10 @@ class Layer(object):
     def __str__(self):
         return "Layer {0}: {1} \n\t IN: {2}\n\tOUT: {3}".format(self.number,self.type,self.inp,self.out)
   
-
+class custom_layer(Layer):
+    def set_setup(self,fct):
+        # with tf.name_scope(self.scope):
+        self.setup = fct
 
 class dropout_layer(Layer):
     def setup(self, stride):
@@ -741,6 +744,7 @@ layers = {
     'relu': relu_layer,
     'route': route_layer,
     'reorg': reorg_layer,
+    'Custom': custom_layer,
 }        
 
 
@@ -802,7 +806,11 @@ def create_layer(ltype, num, *args):
     op_class = layers.get(ltype, Layer)
     return op_class(ltype, num, *args)
 
-
+def create_custom(ltype, num, dim, prefix, prefix_idx, summary, inp, fct, meta):
+    op_class = layers.get(ltype, Layer)
+    instance = op_class(ltype, num, dim, prefix, prefix_idx, summary, inp, meta)    
+    instance.set_setup(fct)
+    return instance
     
 
 def main():
